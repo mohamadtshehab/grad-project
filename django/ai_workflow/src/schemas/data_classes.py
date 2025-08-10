@@ -35,4 +35,12 @@ class TextClassification:
     reasoning: str
     literary_features: list[str]
     non_literary_features: list[str]
-    
+
+@dataclass
+class ProfileValidation :
+    has_empty_profiles: bool 
+    has_repetitive_profiles: bool 
+    empty_profiles: list[str]
+    repetitive_profiles: list[str] 
+    suggestions: list[str] 
+    validation_score: float 

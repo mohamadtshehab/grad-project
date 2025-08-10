@@ -1,12 +1,12 @@
-from ai_workflow.src.language_models.prompts import name_query_prompt, profile_update_prompt, summary_prompt, text_quality_assessment_prompt, text_classification_prompt
-from ai_workflow.src.language_models.llms import name_query_llm, profile_update_llm, summary_llm, text_quality_assessment_llm, text_classification_llm
+from ai_workflow.src.language_models.prompts import name_query_prompt, profile_update_prompt, summary_prompt, text_quality_assessment_prompt, text_classification_prompt, profile_validation_prompt 
+from ai_workflow.src.language_models.llms import name_query_llm, profile_update_llm, summary_llm, text_quality_assessment_llm, text_classification_llm, profile_validation_llm
 from ai_workflow.src.preprocessors.text_checkers import ArabicLanguageDetector
 from ai_workflow.src.schemas.states import State
 from ai_workflow.src.preprocessors.text_splitters import TextChunker
 from ai_workflow.src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
 from ai_workflow.src.preprocessors.metadata_remover import remove_book_metadata
 from ai_workflow.src.databases.database import character_db
-from ai_workflow.src.schemas.data_classes import Profile, TextQualityAssessment, TextClassification
+from ai_workflow.src.schemas.data_classes import Profile, TextQualityAssessment, TextClassification, ProfileValidation
 import os
 import random
 
@@ -391,4 +391,55 @@ def text_classifier(state: State):
     
     return {
         'text_classification': classification
+    }
+
+
+
+def profile_validator(state: State):
+    """
+    Node that validates profiles for emptiness and repetitiveness.
+    """
+    if not state['last_profiles']:
+        return {
+            'profile_validation': ProfileValidation(
+                has_empty_profiles=False,
+                has_repetitive_profiles=False,
+                empty_profiles=[],
+                repetitive_profiles=[],
+                suggestions=["لا توجد بروفايلات للتحقق منها"],
+                validation_score=1.0
+            )
+        }
+    
+    # Convert profiles to a format suitable for the LLM
+    profiles_text = ""
+    for i, profile in enumerate(state['last_profiles']):
+        profiles_text += f"البروفايل {i+1}:\n"
+        profiles_text += f"الاسم: {profile.name}\n"
+        profiles_text += f"التلميح: {profile.hint}\n"
+        profiles_text += f"العمر: {profile.age}\n"
+        profiles_text += f"الدور: {profile.role}\n"
+        profiles_text += f"الصفات الجسدية: {', '.join(profile.physical_characteristics)}\n"
+        profiles_text += f"الشخصية: {profile.personality}\n"
+        profiles_text += f"الأحداث: {', '.join(profile.events)}\n"
+        profiles_text += f"العلاقات: {', '.join(profile.relationships)}\n"
+        profiles_text += f"الأسماء البديلة: {', '.join(profile.aliases)}\n"
+        profiles_text += "---\n"
+    
+    chain_input = {
+        "profiles": profiles_text
+    }
+    
+    chain = profile_validation_prompt | profile_validation_llm
+    response = chain.invoke(chain_input)
+    validation = ProfileValidation(
+        has_empty_profiles= response.has_empty_profiles,
+        has_repetitive_profiles=response.has_empty_profiles,
+        empty_profiles=response.has_empty_profiles,
+        repetitive_profiles=response.has_empty_profiles,
+        suggestions=response.has_empty_profiles,
+        validation_score=response.has_empty_profiles
+    )
+    return {
+        'profile_validation': validation
     }
