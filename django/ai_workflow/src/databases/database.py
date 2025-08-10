@@ -10,7 +10,7 @@ class CharacterDatabase:
     Uses JSON storage for flexible document structure.
     """
     
-    def __init__(self, db_path: str = "characters.sqlite"):
+    def __init__(self, db_path: str = "ai_workflow/characters.sqlite"):
         """
         Initialize the character database.
         

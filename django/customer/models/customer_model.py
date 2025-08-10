@@ -1,7 +1,5 @@
 from django.db import models
-
-#authentication 
-from authentication.models import *
+from django.contrib.auth.models import User
 
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
