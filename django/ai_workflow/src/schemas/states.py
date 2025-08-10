@@ -1,7 +1,7 @@
 from typing import TypedDict
 from langgraph.graph.message import add_messages
 from ai_workflow.src.databases.database import CharacterDatabase
-from ai_workflow.src.schemas.data_classes import Profile, LastAppearingCharacter, TextQualityAssessment, TextClassification
+from ai_workflow.src.schemas.data_classes import Profile, LastAppearingCharacter, TextQualityAssessment, TextClassification, ProfileValidation
 
 class State(TypedDict):
     file_path: str
@@ -18,6 +18,7 @@ class State(TypedDict):
     last_summary: str
     text_quality_assessment: TextQualityAssessment | None
     text_classification: TextClassification | None
+    profile_validation: ProfileValidation | None
 
 initial_state = {
     'file_path': 'ai_workflow/resources/texts/اللص والكلاب.txt',
@@ -32,5 +33,7 @@ initial_state = {
     'no_more_chunks': False,
     'last_summary': '',
     'text_quality_assessment': None,
-    'text_classification': None
+    'text_classification': None,
+    'profile_validation': None
+    
 }
