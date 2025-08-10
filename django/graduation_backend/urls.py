@@ -37,12 +37,13 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("api/v1/", include("authentication.urls.v1")),
-    path("api/v1/", include("books.urls.v1")),
-    path("api/v1/", include("store.urls.v1")),
-    path("api/v1/chunked-uploads/", include("chunked_uploads.urls")),
-    path("api/v1/chunks/", include("chunks.urls")),
-    path("api/v1/profiles/", include("profiles.urls")),
+    # API endpoints
+    path("api/auth/", include("authentication.urls")),
+    path("api/books/", include("books.urls")),
+    path("api/store/", include("store.urls")),
+    path("api/chunked-uploads/", include("chunked_uploads.urls")),
+    path("api/chunks/", include("chunks.urls")),
+    path("api/profiles/", include("profiles.urls")),
     
     # API Documentation
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),

@@ -33,7 +33,6 @@ THIRD_PARTY_APPS = [
     'corsheaders',
     'django_filters',
     'channels',
-    'gmailapi_backend',
     'chunked_upload',
     'debug_toolbar',
     'drf_yasg',
@@ -125,8 +124,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom user model
-AUTH_USER_MODEL = 'authentication.User'
+# Using default Django User model
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -173,13 +171,7 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Dubai'
 
-# Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-GMAIL_API_CLIENT_ID = 'your-gmail-client-id'
-GMAIL_API_CLIENT_SECRET = 'your-gmail-client-secret'
-GMAIL_API_REFRESH_TOKEN = 'your-gmail-refresh-token'
-DEFAULT_FROM_EMAIL = 'noreply@example.com'
-EMAIL_HOST_USER = 'your-email@example.com'
+# Email settings removed
 
 # Chunked upload settings
 CHUNKED_UPLOAD_ABSTRACT_MODEL = False
