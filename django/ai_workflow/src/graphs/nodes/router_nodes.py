@@ -56,3 +56,15 @@ def router_from_text_classifier_to_cleaner_or_end(state: State):
         return 'cleaner'
     else:
         return 'END'
+
+def router_from_profile_validator_to_chunk_updater_or_end(state: State):
+    """
+    Node that routes to profile refresher or end based on profile validation results.
+    """
+    validation = state['profile_validation']
+    
+    # If there are significant issues with profiles, continue to profile refresher
+    if (validation.has_empty_profiles and validation.has_repetitive_profiles) or validation.validation_score < 0.65:
+        return 'END'
+    else:
+        return 'chunk_updater'
