@@ -183,7 +183,8 @@ def profile_retriever_creator(state: State):
                 'aliases': [],
             }
             
-            character_db.insert_character(name, new_profile)
+            # Insert character and get the generated ID
+            character_id = character_db.insert_character(name, new_profile)
             
             # Create data dictionary that will be send to the LLM
             profile = Profile(
@@ -196,7 +197,7 @@ def profile_retriever_creator(state: State):
                 events=[],
                 relationships=[],
                 aliases=[],
-                id='',
+                id=character_id,  # Use the generated ID from database
             )
             profiles.append(profile)
     
@@ -245,10 +246,12 @@ def profile_refresher(state: State):
             'aliases': profile_data.aliases,
         }
     
-        character_db.update_character(
-            profile_data.id,
-            updated_profile_dict
-        )
+        # Only update if the profile has a valid ID
+        if profile_data.id:
+            character_db.update_character(
+                profile_data.id,
+                updated_profile_dict
+            )
     
     return {
         'last_profiles': updated_profiles,
@@ -395,13 +398,13 @@ def text_classifier(state: State):
 
 
 
-def Empty_profile_validator(state: State):
+def empty_profile_validator(state: State):
     """
     Node that validates Empty profiles and Suggest Changes.
     """
     if not state['last_profiles']:
         return {
-            'profile_validation': EmptyProfileValidation(
+            'empty_profile_validation': EmptyProfileValidation(
                 has_empty_profiles=False,
                 empty_profiles=[],
                 suggestions=["لا توجد بروفايلات للتحقق منها"],
@@ -432,7 +435,7 @@ def Empty_profile_validator(state: State):
     
     chain = empty_profile_validation_prompt | empty_profile_validation_llm
     response = chain.invoke(chain_input)
-    Empty_validation = EmptyProfileValidation(
+    empty_profile_validation = EmptyProfileValidation(
         has_empty_profiles= response.has_empty_profiles,
         empty_profiles=response.empty_profiles,
         suggestions=response.suggestions,
@@ -469,10 +472,13 @@ def Empty_profile_validator(state: State):
             'aliases': profile_data.aliases,
         }
     
-        character_db.update_character(
-            profile_data.id,
-            updated_profile_dict
-        )
+        # Only update if the profile has a valid ID
+        if profile_data.id:
+            character_db.update_character(
+                profile_data.id,
+                updated_profile_dict
+            )
     return {
-        'empty_profile_validation': Empty_validation
+        'empty_profile_validation': empty_profile_validation,
+        'last_profiles': updated_profiles  # Also update last_profiles with the validated profiles
     }

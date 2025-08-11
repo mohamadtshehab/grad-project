@@ -17,7 +17,7 @@ graph.add_node('metadata_remover', metadata_remover)
 graph.add_node('text_quality_assessor', text_quality_assessor)
 graph.add_node('text_classifier', text_classifier)
 
-graph.add_node('empty_profile_validator', Empty_profile_validator)
+graph.add_node('empty_profile_validator', empty_profile_validator)
 
 
 graph.set_entry_point('language_checker')
@@ -63,7 +63,6 @@ graph.add_conditional_edges(
     }
 )
 
-graph.add_edge('profile_refresher', 'chunk_updater')
 
 graph.add_edge('summarizer', 'second_name_querier')
 
