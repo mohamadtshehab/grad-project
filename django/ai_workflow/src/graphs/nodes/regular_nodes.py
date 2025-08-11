@@ -413,17 +413,18 @@ def Empty_profile_validator(state: State):
     # Convert profiles to a format suitable for the LLM
     profiles_text = ""
     for i, profile in enumerate(state['last_profiles']):
-        profiles_text += f"البروفايل {i+1}:\n"
-        profiles_text += f"الاسم: {profile.name}\n"
-        profiles_text += f"التلميح: {profile.hint}\n"
-        profiles_text += f"العمر: {profile.age}\n"
-        profiles_text += f"الدور: {profile.role}\n"
-        profiles_text += f"الصفات الجسدية: {', '.join(profile.physical_characteristics)}\n"
-        profiles_text += f"الشخصية: {profile.personality}\n"
-        profiles_text += f"الأحداث: {', '.join(profile.events)}\n"
-        profiles_text += f"العلاقات: {', '.join(profile.relationships)}\n"
-        profiles_text += f"الأسماء البديلة: {', '.join(profile.aliases)}\n"
-        profiles_text += "---\n"
+        if (profile.physical_characteristics == [] and profile.personality == "") or (profile.relationships == [] and profile.events ==[]): 
+            profiles_text += f"البروفايل {i+1}:\n"
+            profiles_text += f"الاسم: {profile.name}\n"
+            profiles_text += f"التلميح: {profile.hint}\n"
+            profiles_text += f"العمر: {profile.age}\n"
+            profiles_text += f"الدور: {profile.role}\n"
+            profiles_text += f"الصفات الجسدية: {', '.join(profile.physical_characteristics)}\n"
+            profiles_text += f"الشخصية: {profile.personality}\n"
+            profiles_text += f"الأحداث: {', '.join(profile.events)}\n"
+            profiles_text += f"العلاقات: {', '.join(profile.relationships)}\n"
+            profiles_text += f"الأسماء البديلة: {', '.join(profile.aliases)}\n"
+            profiles_text += "---\n"
     
     chain_input = {
         "text": str(state['last_summary']),
