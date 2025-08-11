@@ -1,0 +1,38 @@
+# Python
+*.py[cod]
+__pycache__/
+*.so
+
+# Virtual Environment
+venv/
+env/
+
+# Django
+*.log
+db.sqlite3
+/static/
+/media/
+.env
+
+# Local Django migrations
+*/migrations/*
+!*/migrations/__init__.py
+
+# IDEs
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Coverage Reports
+.coverage
+htmlcov/
+.coverage.*
+
+
+# Logs
+logs/
+
+ai_workflow/resources/texts
