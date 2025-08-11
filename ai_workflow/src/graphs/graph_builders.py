@@ -63,6 +63,8 @@ graph.add_conditional_edges(
     }
 )
 
+graph.add_edge('profile_refresher', 'chunk_updater')
+
 graph.add_edge('summarizer', 'second_name_querier')
 
 graph.add_edge('second_name_querier', 'profile_retriever_creator')
