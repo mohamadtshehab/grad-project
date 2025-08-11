@@ -37,10 +37,9 @@ class TextClassification:
     non_literary_features: list[str]
 
 @dataclass
-class ProfileValidation :
+class EmptyProfileValidation :
     has_empty_profiles: bool 
-    has_repetitive_profiles: bool 
     empty_profiles: list[str]
-    repetitive_profiles: list[str] 
     suggestions: list[str] 
+    profiles: list[Profile]
     validation_score: float 
