@@ -85,12 +85,4 @@ class TextClassification(BaseModel):
     reasoning: str = Field(description="التفسير المنطقي لتصنيف النص")
     literary_features: List[str] = Field(description="قائمة بالخصائص الأدبية الموجودة في النص (إذا كان أدبياً)")
     non_literary_features: List[str] = Field(description="قائمة بالخصائص غير الأدبية الموجودة في النص (إذا لم يكن أدبياً)")
-
-class ProfileValidation(BaseModel):
-    """Use this schema to format the profile validation output."""
-    has_empty_profiles: bool = Field(description="هل توجد بروفايلات فارغة")
-    has_repetitive_profiles: bool = Field(description="هل توجد بروفايلات متكررة")
-    empty_profiles: List[str] = Field(description="قائمة بأسماء البروفايلات الفارغة")
-    repetitive_profiles: List[str] = Field(description="قائمة بأسماء البروفايلات المتكررة")
-    suggestions: List[str] = Field(description="اقتراحات لتحسين البروفايلات")
-    validation_score: float = Field(description="درجة جودة البروفايلات من 0 إلى 1")
+    

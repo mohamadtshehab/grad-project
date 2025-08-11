@@ -57,8 +57,3 @@ text_classification_llm = ChatGoogleGenerativeAI(model=model,
                                                 temperature=0.0,
                                                 safety_settings=safety_settings,
                                                 ).with_structured_output(TextClassification)
-
-profile_validation_llm = ChatGoogleGenerativeAI(model=model,
-                                               temperature=0.0,
-                                               safety_settings=safety_settings,
-                                               ).with_structured_output(ProfileValidation)
