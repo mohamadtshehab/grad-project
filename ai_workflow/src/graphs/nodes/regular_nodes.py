@@ -1,12 +1,12 @@
-from ai_workflow.src.language_models.prompts import name_query_prompt, profile_update_prompt, summary_prompt, text_quality_assessment_prompt, text_classification_prompt, profile_validation_prompt 
-from ai_workflow.src.language_models.llms import name_query_llm, profile_update_llm, summary_llm, text_quality_assessment_llm, text_classification_llm, profile_validation_llm
+from ai_workflow.src.language_models.prompts import name_query_prompt, profile_update_prompt, summary_prompt, text_quality_assessment_prompt, text_classification_prompt, empty_profile_validation_prompt
+from ai_workflow.src.language_models.llms import name_query_llm, profile_update_llm, summary_llm, text_quality_assessment_llm, text_classification_llm, empty_profile_validation_llm
 from ai_workflow.src.preprocessors.text_checkers import ArabicLanguageDetector
 from ai_workflow.src.schemas.states import State
 from ai_workflow.src.preprocessors.text_splitters import TextChunker
 from ai_workflow.src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
 from ai_workflow.src.preprocessors.metadata_remover import remove_book_metadata
 from ai_workflow.src.databases.database import character_db
-from ai_workflow.src.schemas.data_classes import Profile, TextQualityAssessment, TextClassification, ProfileValidation
+from ai_workflow.src.schemas.data_classes import Profile, TextQualityAssessment, TextClassification, EmptyProfileValidation
 import os
 import random
 
@@ -393,3 +393,86 @@ def text_classifier(state: State):
         'text_classification': classification
     }
 
+
+
+def Empty_profile_validator(state: State):
+    """
+    Node that validates Empty profiles and Suggest Changes.
+    """
+    if not state['last_profiles']:
+        return {
+            'profile_validation': EmptyProfileValidation(
+                has_empty_profiles=False,
+                empty_profiles=[],
+                suggestions=["لا توجد بروفايلات للتحقق منها"],
+                profiles=[],
+                validation_score=1.0
+            )
+        }
+    
+    # Convert profiles to a format suitable for the LLM
+    profiles_text = ""
+    for i, profile in enumerate(state['last_profiles']):
+        profiles_text += f"البروفايل {i+1}:\n"
+        profiles_text += f"الاسم: {profile.name}\n"
+        profiles_text += f"التلميح: {profile.hint}\n"
+        profiles_text += f"العمر: {profile.age}\n"
+        profiles_text += f"الدور: {profile.role}\n"
+        profiles_text += f"الصفات الجسدية: {', '.join(profile.physical_characteristics)}\n"
+        profiles_text += f"الشخصية: {profile.personality}\n"
+        profiles_text += f"الأحداث: {', '.join(profile.events)}\n"
+        profiles_text += f"العلاقات: {', '.join(profile.relationships)}\n"
+        profiles_text += f"الأسماء البديلة: {', '.join(profile.aliases)}\n"
+        profiles_text += "---\n"
+    
+    chain_input = {
+        "text": str(state['last_summary']),
+        "profiles": profiles_text
+    }
+    
+    chain = empty_profile_validation_prompt | empty_profile_validation_llm
+    response = chain.invoke(chain_input)
+    Empty_validation = EmptyProfileValidation(
+        has_empty_profiles= response.has_empty_profiles,
+        empty_profiles=response.empty_profiles,
+        suggestions=response.suggestions,
+        profiles = response.profiles,
+        validation_score=response.validation_score
+    )
+    updated_profiles = []
+    for profile_data in response.profiles:
+        # create the data dictionary that will be an item in the list of profiles in the state
+        profile = Profile(
+            name=profile_data.name,
+            hint=profile_data.hint,
+            age=profile_data.age,
+            role=profile_data.role,  # Use the role determined by the LLM with tool
+            physical_characteristics=profile_data.physical_characteristics,
+            personality=profile_data.personality,
+            events=profile_data.events,
+            relationships=profile_data.relations,
+            aliases=profile_data.aliases,
+            id=profile_data.id
+        )
+        updated_profiles.append(profile)
+        
+        # create the json object that will be updated in the database
+        updated_profile_dict = {
+            'name': profile_data.name,
+            'hint': profile_data.hint,
+            'age': profile_data.age,
+            'role': profile_data.role,  # Use the role determined by the LLM with tool
+            'physical_characteristics': profile_data.physical_characteristics,
+            'personality': profile_data.personality,
+            'events': profile_data.events,
+            'relationships': profile_data.relations,
+            'aliases': profile_data.aliases,
+        }
+    
+        character_db.update_character(
+            profile_data.id,
+            updated_profile_dict
+        )
+    return {
+        'empty_profile_validation': Empty_validation
+    }
