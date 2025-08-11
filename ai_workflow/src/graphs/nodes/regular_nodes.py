@@ -393,13 +393,15 @@ def text_classifier(state: State):
         'text_classification': classification
     }
 
-
-
 def profile_validator(state: State):
     """
     Node that validates profiles for emptiness and repetitiveness.
+    Reads all profiles from the characters database instead of just last profiles.
     """
-    if not state['last_profiles']:
+    # Get all profiles from the database
+    all_characters = character_db.get_all_characters()
+    
+    if not all_characters:
         return {
             'profile_validation': ProfileValidation(
                 has_empty_profiles=False,
@@ -411,9 +413,30 @@ def profile_validator(state: State):
             )
         }
     
-    # Convert profiles to a format suitable for the LLM
+    # Convert database profiles to Profile objects and format for LLM
     profiles_text = ""
-    for i, profile in enumerate(state['last_profiles']):
+    profiles = []
+    
+    for i, char_data in enumerate(all_characters):
+        # Extract profile data from database format
+        profile_data = char_data['profile']
+        
+        # Create Profile object
+        profile = Profile(
+            id=char_data['id'],
+            name=profile_data.get('name', ''),
+            hint=profile_data.get('hint', ''),
+            age=profile_data.get('age', ''),
+            role=profile_data.get('role', ''),
+            physical_characteristics=profile_data.get('physical_characteristics', []),
+            personality=profile_data.get('personality', ''),
+            events=profile_data.get('events', []),
+            relationships=profile_data.get('relationships', []),
+            aliases=profile_data.get('aliases', [])
+        )
+        profiles.append(profile)
+        
+        # Format for LLM input
         profiles_text += f"البروفايل {i+1}:\n"
         profiles_text += f"الاسم: {profile.name}\n"
         profiles_text += f"التلميح: {profile.hint}\n"
@@ -432,14 +455,17 @@ def profile_validator(state: State):
     
     chain = profile_validation_prompt | profile_validation_llm
     response = chain.invoke(chain_input)
+    
+    # Fix the validation logic - use correct response fields
     validation = ProfileValidation(
-        has_empty_profiles= response.has_empty_profiles,
-        has_repetitive_profiles=response.has_empty_profiles,
-        empty_profiles=response.has_empty_profiles,
-        repetitive_profiles=response.has_empty_profiles,
-        suggestions=response.has_empty_profiles,
-        validation_score=response.has_empty_profiles
+        has_empty_profiles=response.has_empty_profiles,
+        has_repetitive_profiles=response.has_repetitive_profiles,
+        empty_profiles=response.empty_profiles,
+        repetitive_profiles=response.repetitive_profiles,
+        suggestions=response.suggestions,
+        validation_score=response.validation_score
     )
+    
     return {
         'profile_validation': validation
     }
