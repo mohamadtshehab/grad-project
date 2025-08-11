@@ -4,7 +4,7 @@ from langchain_google_genai import (
     HarmCategory,
     
 )
-from ai_workflow.src.schemas.output_structures import NameQuerier, ProfileRefresher, Summary, BookNameExtractor, TextQualityAssessment, TextClassification, ProfileValidation
+from ai_workflow.src.schemas.output_structures import NameQuerier, ProfileRefresher, Summary, BookNameExtractor, TextQualityAssessment, TextClassification, EmptyProfileValidation
 from ai_workflow.src.language_models.tools import character_role_tool
 from dotenv import load_dotenv
 
@@ -57,3 +57,7 @@ text_classification_llm = ChatGoogleGenerativeAI(model=model,
                                                 temperature=0.0,
                                                 safety_settings=safety_settings,
                                                 ).with_structured_output(TextClassification)
+empty_profile_validation_llm = ChatGoogleGenerativeAI(model=model,
+                                               temperature=0.0,
+                                               safety_settings=safety_settings,
+                                               ).with_structured_output(EmptyProfileValidation)
