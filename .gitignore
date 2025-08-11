@@ -31,16 +31,8 @@ Thumbs.db
 htmlcov/
 .coverage.*
 
-# Docker
-docker-compose.override.yml
 
 # Logs
 logs/
-
-email_client_sender_creadintials.json
-
-get_gmail_refresh_token.py
-
-celerybeat-schedule
 
 ai_workflow/resources/texts
