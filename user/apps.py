@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class BooksConfig(AppConfig):
+class UserConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'books'
-    verbose_name = 'Books Management'
+    name = 'user'
+    verbose_name = 'User Management'

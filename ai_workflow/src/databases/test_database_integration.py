@@ -46,7 +46,7 @@ def test_database_integration():
         "chunk_index": 0
     }
     
-    character_id = db.insert_character("أحمد", test_profile, "test character")
+    character_id = db.insert_character(test_profile)
     print(f"Inserted character with ID: {character_id}")
     
     # Update the state
@@ -60,7 +60,7 @@ def test_database_integration():
     print("\n3. Testing character retrieval...")
     retrieved = db.get_character(character_id)
     if retrieved:
-        print(f"Retrieved character: {retrieved['name']}")
+        print(f"Retrieved character: {retrieved['profile']['name']}")
         print(f"Profile data: {retrieved['profile']['role']}, {retrieved['profile']['age']} years old")
     
     # Test getting all characters
@@ -68,7 +68,7 @@ def test_database_integration():
     all_characters = db.get_all_characters()
     print(f"Total characters in database: {len(all_characters)}")
     for char in all_characters:
-        print(f"  - {char['name']}: {char['profile']['role']}")
+        print(f"  - {char['profile']['name']}: {char['profile']['role']}")
     
     # Clear test database
     db.clear_database()
@@ -115,7 +115,7 @@ def test_no_sql_storage():
         }
     }
     
-    character_id = db.insert_character("فاطمة", complex_profile, "the teacher from Alexandria")
+    character_id = db.insert_character(complex_profile)
     print(f"Inserted complex profile with ID: {character_id}")
     
     # Retrieve and verify the complex structure

@@ -27,39 +27,81 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
+            # Check if the old table exists and migrate data if needed
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS characters (
-                    id TEXT PRIMARY KEY,    -- A unique ID we generate (e.g., a UUID)
-                    name TEXT NOT NULL,               -- The character's common name (e.g., "Ali")
-                    profile_json TEXT                 -- JSON document containing the character profile
-                );
+                SELECT name FROM sqlite_master WHERE type='table' AND name='characters'
             """)
             
-            # Create indexes for better performance
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_characters_name ON characters(name);")
+            if cursor.fetchone():
+                # Check if name column exists
+                cursor.execute("PRAGMA table_info(characters)")
+                columns = [column[1] for column in cursor.fetchall()]
+                
+                if 'name' in columns:
+                    # Create new table without name column
+                    cursor.execute("""
+                        CREATE TABLE characters_new (
+                            id TEXT PRIMARY KEY,
+                            profile_json TEXT NOT NULL
+                        )
+                    """)
+                    
+                    # Copy data from old table, extracting name from profile_json
+                    cursor.execute("""
+                        INSERT INTO characters_new (id, profile_json)
+                        SELECT id, profile_json FROM characters
+                    """)
+                    
+                    # Drop old table and rename new one
+                    cursor.execute("DROP TABLE characters")
+                    cursor.execute("ALTER TABLE characters_new RENAME TO characters")
+                else:
+                    # Table already migrated, just ensure structure
+                    cursor.execute("""
+                        CREATE TABLE IF NOT EXISTS characters (
+                            id TEXT PRIMARY KEY,
+                            profile_json TEXT NOT NULL
+                        )
+                    """)
+            else:
+                # Create new table
+                cursor.execute("""
+                    CREATE TABLE characters (
+                        id TEXT PRIMARY KEY,
+                        profile_json TEXT NOT NULL
+                    )
+                """)
+            
+            # Create index on profile_json for JSON queries
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_characters_profile ON characters(profile_json);")
             
             conn.commit()
     
-    def insert_character(self, name: str, profile: Dict[str, Any], ) -> str:
+    def _extract_name_from_profile(self, profile: Dict[str, Any]) -> str:
+        """Extract name from profile JSON, with fallback to id if name not found."""
+        return profile.get('name', 'Unknown')
+    
+    def insert_character(self, profile: Dict[str, Any]) -> str:
         """
         Insert a new character profile into the database.
         
         Args:
-            name: Character's name
-            profile: Character profile as a dictionary
+            profile: Character profile as a dictionary (must contain 'name' field)
             
         Returns:
             The generated id
         """
-        id = str(uuid.uuid4())
+        if 'name' not in profile:
+            raise ValueError("Profile must contain a 'name' field")
         
+        id = str(uuid.uuid4())
         
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO characters (id, name, profile_json)
-                VALUES (?, ?, ?)
-            """, (id, name, json.dumps(profile, ensure_ascii=False)))
+                INSERT INTO characters (id, profile_json)
+                VALUES (?, ?)
+            """, (id, json.dumps(profile, ensure_ascii=False)))
             conn.commit()
         
         return id
@@ -100,18 +142,17 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT name, profile_json
+                SELECT profile_json
                 FROM characters
                 WHERE id = ?
             """, (id,))
             
             row = cursor.fetchone()
             if row:
-                name, profile_json = row
+                profile_json = row[0]
                 profile = json.loads(profile_json)
                 return {
                     'id': id,
-                    'name': name,
                     'profile': profile
                 }
             return None
@@ -119,6 +160,7 @@ class CharacterDatabase:
     def find_characters_by_name(self, name: str) -> List[Dict[str, Any]]:
         """
         Find characters by name (handles multiple characters with same name).
+        Searches within the profile JSON for the name field.
         
         Args:
             name: Character name to search for
@@ -128,19 +170,19 @@ class CharacterDatabase:
         """
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
+            # Use JSON extraction to search within profile_json
             cursor.execute("""
-                SELECT id, name, profile_json
+                SELECT id, profile_json
                 FROM characters
-                WHERE name LIKE ?
+                WHERE json_extract(profile_json, '$.name') LIKE ?
             """, (f'%{name}%',))
             
             characters = []
             for row in cursor.fetchall():
-                id, name, profile_json = row
+                id, profile_json = row
                 profile = json.loads(profile_json)
                 characters.append({
                     'id': id,
-                    'name': name,
                     'profile': profile
                 })
             
@@ -161,21 +203,19 @@ class CharacterDatabase:
         Returns:
             List of character profiles with confidence scores
         """
-        # Normalize the search name using your existing cleaner        
         # Get all characters for fuzzy matching
         all_characters = self.get_all_characters()
         
         # Prepare candidates for fuzzy matching
         candidates = []
         for char in all_characters:
-            char_name = char['name']
+            char_name = char['profile']['name']
             
             # Normalize stored name
             normalized_char_name = normalize_arabic_characters(char_name)
             
             # Calculate name similarity
             name_similarity = fuzz.ratio(name, normalized_char_name) / 100.0
-            
             
             # Combined similarity score using configured weights
             from ai_workflow.src.configs import FUZZY_MATCHING_CONFIG
@@ -203,18 +243,17 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, name, profile_json
+                SELECT id, profile_json
                 FROM characters
-                ORDER BY name
+                ORDER BY json_extract(profile_json, '$.name')
             """)
             
             characters = []
             for row in cursor.fetchall():
-                id, name, profile_json = row
+                id, profile_json = row
                 profile = json.loads(profile_json)
                 characters.append({
                     'id': id,
-                    'name': name,
                     'profile': profile
                 })
             
@@ -238,7 +277,7 @@ class CharacterDatabase:
     
     def search_characters(self, query: str) -> List[Dict[str, Any]]:
         """
-        Search characters by name in profile.
+        Search characters by name in profile JSON.
         
         Args:
             query: Search query
@@ -249,19 +288,18 @@ class CharacterDatabase:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, name, profile_json
+                SELECT id, profile_json
                 FROM characters
-                WHERE name LIKE ?
-                ORDER BY name
+                WHERE json_extract(profile_json, '$.name') LIKE ?
+                ORDER BY json_extract(profile_json, '$.name')
             """, (f'%{query}%',))
             
             characters = []
             for row in cursor.fetchall():
-                id, name, profile_json = row
+                id, profile_json = row
                 profile = json.loads(profile_json)
                 characters.append({
                     'id': id,
-                    'name': name,
                     'profile': profile
                 })
             
