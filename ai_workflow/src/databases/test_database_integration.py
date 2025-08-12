@@ -60,7 +60,7 @@ def test_database_integration():
     print("\n3. Testing character retrieval...")
     retrieved = db.get_character(character_id)
     if retrieved:
-        print(f"Retrieved character: {retrieved['name']} - {retrieved['disambiguation_hint']}")
+        print(f"Retrieved character: {retrieved['name']}")
         print(f"Profile data: {retrieved['profile']['role']}, {retrieved['profile']['age']} years old")
     
     # Test getting all characters
@@ -68,7 +68,7 @@ def test_database_integration():
     all_characters = db.get_all_characters()
     print(f"Total characters in database: {len(all_characters)}")
     for char in all_characters:
-        print(f"  - {char['name']} ({char['disambiguation_hint']}): {char['profile']['role']}")
+        print(f"  - {char['name']}: {char['profile']['role']}")
     
     # Clear test database
     db.clear_database()

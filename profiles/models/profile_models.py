@@ -11,7 +11,6 @@ class Profile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     chunk = models.ForeignKey(Chunk, on_delete=models.CASCADE, related_name='profiles')
     name = models.CharField(max_length=255, help_text="Character's name")
-    hint = models.TextField(help_text="Context hint about the character")
     age = models.CharField(max_length=100, blank=True, help_text="Character's age")
     role = models.CharField(max_length=255, blank=True, help_text="Character's role in the story")
     personality = models.TextField(blank=True, help_text="Character's personality traits")
@@ -58,7 +57,6 @@ class Profile(models.Model):
         return {
             'id': str(self.id),
             'name': self.name,
-            'hint': self.hint,
             'age': self.age,
             'role': self.role,
             'physical_characteristics': self.physical_characteristics,
@@ -74,7 +72,6 @@ class Profile(models.Model):
         return cls(
             chunk=chunk,
             name=profile_dict.get('name', ''),
-            hint=profile_dict.get('hint', ''),
             age=profile_dict.get('age', ''),
             role=profile_dict.get('role', ''),
             personality=profile_dict.get('personality', ''),

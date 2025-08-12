@@ -140,7 +140,7 @@ def profile_retriever_creator(state: State):
     """
     Node that creates a new profile or retrieves an existing one.
     Uses last_appearing_characters to retrieve profiles from character_db. If no character exists,
-    creates a new entry with that name and hint, keeping other profile data null.
+    creates a new entry with that name, keeping other profile data null.    
     """
     last_appearing_characters = state['last_appearing_characters']
     
@@ -148,7 +148,6 @@ def profile_retriever_creator(state: State):
     
     for character in last_appearing_characters:
         name = character.name
-        hint = character.hint
         
         existing_characters = character_db.find_characters_by_name(name)
         
@@ -158,7 +157,6 @@ def profile_retriever_creator(state: State):
                 profile_data = char['profile']
                 profile = Profile(
                     name=char['name'],
-                    hint=profile_data['hint'],
                     age=profile_data['age'],
                     role=profile_data['role'],
                     physical_characteristics=profile_data['physical_characteristics'],
@@ -173,7 +171,6 @@ def profile_retriever_creator(state: State):
             # create the json object that will be stored in the database (no need for id because it has its own column)
             new_profile = {
                 'name': name,
-                'hint': hint,
                 'age': '',
                 'role': '',
                 'physical_characteristics': [],
@@ -189,7 +186,6 @@ def profile_retriever_creator(state: State):
             # Create data dictionary that will be send to the LLM
             profile = Profile(
                 name=name,
-                hint=hint,
                 age='',
                 role='',
                 physical_characteristics=[],
@@ -221,7 +217,6 @@ def profile_refresher(state: State):
         # create the data dictionary that will be an item in the list of profiles in the state
         profile = Profile(
             name=profile_data.name,
-            hint=profile_data.hint,
             age=profile_data.age,
             role=profile_data.role,  # Use the role determined by the LLM with tool
             physical_characteristics=profile_data.physical_characteristics,
@@ -236,7 +231,6 @@ def profile_refresher(state: State):
         # create the json object that will be updated in the database
         updated_profile_dict = {
             'name': profile_data.name,
-            'hint': profile_data.hint,
             'age': profile_data.age,
             'role': profile_data.role,  # Use the role determined by the LLM with tool
             'physical_characteristics': profile_data.physical_characteristics,
@@ -413,24 +407,9 @@ def empty_profile_validator(state: State):
             )
         }
     
-    # Convert profiles to a format suitable for the LLM
-    profiles_text = ""
-    for i, profile in enumerate(state['last_profiles']):
-        profiles_text += f"البروفايل {i+1}:\n"
-        profiles_text += f"الاسم: {profile.name}\n"
-        profiles_text += f"التلميح: {profile.hint}\n"
-        profiles_text += f"العمر: {profile.age}\n"
-        profiles_text += f"الدور: {profile.role}\n"
-        profiles_text += f"الصفات الجسدية: {', '.join(profile.physical_characteristics)}\n"
-        profiles_text += f"الشخصية: {profile.personality}\n"
-        profiles_text += f"الأحداث: {', '.join(profile.events)}\n"
-        profiles_text += f"العلاقات: {', '.join(profile.relationships)}\n"
-        profiles_text += f"الأسماء البديلة: {', '.join(profile.aliases)}\n"
-        profiles_text += "---\n"
-    
     chain_input = {
         "text": str(state['last_summary']),
-        "profiles": profiles_text
+        "profiles": str(state['last_profiles'])
     }
     
     chain = empty_profile_validation_prompt | empty_profile_validation_llm
@@ -447,7 +426,6 @@ def empty_profile_validator(state: State):
         # create the data dictionary that will be an item in the list of profiles in the state
         profile = Profile(
             name=profile_data.name,
-            hint=profile_data.hint,
             age=profile_data.age,
             role=profile_data.role,  # Use the role determined by the LLM with tool
             physical_characteristics=profile_data.physical_characteristics,
@@ -462,7 +440,6 @@ def empty_profile_validator(state: State):
         # create the json object that will be updated in the database
         updated_profile_dict = {
             'name': profile_data.name,
-            'hint': profile_data.hint,
             'age': profile_data.age,
             'role': profile_data.role,  # Use the role determined by the LLM with tool
             'physical_characteristics': profile_data.physical_characteristics,

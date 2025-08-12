@@ -4,7 +4,6 @@ from dataclasses import dataclass
 @dataclass
 class Profile:
     name: str
-    hint: str
     age: str
     role: str
     physical_characteristics: list[str]
@@ -17,8 +16,6 @@ class Profile:
 @dataclass
 class LastAppearingCharacter:
     name: str
-    hint: str
-
 @dataclass
 class TextQualityAssessment:
     quality_score: float

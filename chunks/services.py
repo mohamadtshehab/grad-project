@@ -142,7 +142,6 @@ class AIBookProcessor:
                 profile = Profile.objects.create(
                     chunk=chunk_obj,
                     name=f"Character_{idx}",
-                    hint=f"Character from chunk {idx}",
                     age="",
                     role="",
                     personality="",
