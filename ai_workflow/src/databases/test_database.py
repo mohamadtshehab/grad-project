@@ -53,7 +53,7 @@ def test_database_functionality():
     print("\n3. Testing character retrieval by ID...")
     character = db.get_character(character_id1)
     if character:
-        print(f"Retrieved character: {character['name']} - {character['disambiguation_hint']}")
+        print(f"Retrieved character: {character['name']}")
         print(f"Profile: {character['profile']['role']}, {character['profile']['age']} years old")
     else:
         print("Failed to retrieve character")
@@ -63,7 +63,7 @@ def test_database_functionality():
     characters = db.find_characters_by_name("أحمد")
     print(f"Found {len(characters)} characters named أحمد:")
     for char in characters:
-        print(f"  - {char['name']} ({char['disambiguation_hint']}): {char['profile']['role']}")
+        print(f"  - {char['name']}: {char['profile']['role']}")
     
     # Test 5: Update character profile
     print("\n5. Testing character profile update...")
@@ -79,14 +79,14 @@ def test_database_functionality():
     search_results = db.search_characters("detective")
     print(f"Found {len(search_results)} characters matching 'detective':")
     for char in search_results:
-        print(f"  - {char['name']} ({char['disambiguation_hint']})")
+        print(f"  - {char['name']}")
     
     # Test 7: Get all characters
     print("\n7. Testing get all characters...")
     all_characters = db.get_all_characters()
     print(f"Total characters in database: {len(all_characters)}")
     for char in all_characters:
-        print(f"  - {char['name']} ({char['disambiguation_hint']}): {char['profile']['role']}")
+        print(f"  - {char['name']}: {char['profile']['role']}")
     
     # Test 8: Get character count
     print("\n8. Testing character count...")

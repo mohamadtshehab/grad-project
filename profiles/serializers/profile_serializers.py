@@ -12,7 +12,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = [
-            'id', 'chunk', 'chunk_index', 'book_title', 'name', 'hint', 'age', 'role',
+            'id', 'chunk', 'chunk_index', 'book_title', 'name', 'age', 'role',
             'personality', 'physical_characteristics', 'events', 'relationships', 
             'aliases', 'created_at', 'updated_at'
         ]
@@ -28,7 +28,7 @@ class ProfileListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = [
-            'id', 'chunk', 'chunk_index', 'book_title', 'name', 'hint', 'age', 'role',
+            'id', 'chunk', 'chunk_index', 'book_title', 'name', 'age', 'role',
             'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'book_title', 'chunk_index']
@@ -44,7 +44,7 @@ class ProfileDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = [
-            'id', 'chunk', 'chunk_index', 'book_title', 'name', 'hint', 'age', 'role',
+            'id', 'chunk', 'chunk_index', 'book_title', 'name', 'age', 'role',
             'personality', 'physical_characteristics', 'events', 'relationships', 
             'aliases', 'chunk_text_preview', 'created_at', 'updated_at'
         ]

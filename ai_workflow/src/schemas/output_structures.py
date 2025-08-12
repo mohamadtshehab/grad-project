@@ -2,9 +2,8 @@ from pydantic import BaseModel, Field
 from typing import List
 
 class Character(BaseModel):
-    """Single character with name and hint."""
+    """Single character with name."""
     name: str = Field(description="اسم الشخصية")
-    hint: str = Field(description="تلميح عن الشخصية")
 
 class NameQuerier(BaseModel):
     """Use this schema to format the name query output."""
@@ -15,10 +14,6 @@ class ProfileData(BaseModel):
     
     name: str = Field(
         description="اسم الشخصية كما هو مذكور في البروفايل المعطى؛ لا يتم تغييره"
-    )
-    
-    hint: str = Field(
-        description="تلميح مميز يحدد الشخصية ويساعد على تمييزها، يؤخذ من البروفايل المعطى"
     )
     
     age: str = Field(

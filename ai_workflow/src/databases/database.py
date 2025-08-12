@@ -2,6 +2,8 @@ import sqlite3
 import json
 import uuid
 from typing import Dict, List, Optional, Any
+from rapidfuzz import fuzz, process
+from ai_workflow.src.preprocessors.text_cleaners import normalize_arabic_characters
 
 
 class CharacterDatabase:
@@ -29,7 +31,7 @@ class CharacterDatabase:
                 CREATE TABLE IF NOT EXISTS characters (
                     id TEXT PRIMARY KEY,    -- A unique ID we generate (e.g., a UUID)
                     name TEXT NOT NULL,               -- The character's common name (e.g., "Ali")
-                    profile_json TEXT                 -- JSON document containing the character profile (including hint)
+                    profile_json TEXT                 -- JSON document containing the character profile
                 );
             """)
             
@@ -84,7 +86,6 @@ class CharacterDatabase:
             conn.commit()
             return cursor.rowcount > 0
     
-
 
     def get_character(self, id: str) -> Optional[Dict[str, Any]]:
         """
@@ -144,7 +145,54 @@ class CharacterDatabase:
                 })
             
             return characters
-    
+
+    def find_characters_by_name_enhanced(
+        self, 
+        name: str, 
+        similarity_threshold: float = 0.8
+    ) -> List[Dict[str, Any]]:
+        """
+        Enhanced character search using fuzzy matching.
+        
+        Args:
+            name: Character name to search for
+            similarity_threshold: Minimum similarity score (0.0 to 1.0)
+            
+        Returns:
+            List of character profiles with confidence scores
+        """
+        # Normalize the search name using your existing cleaner        
+        # Get all characters for fuzzy matching
+        all_characters = self.get_all_characters()
+        
+        # Prepare candidates for fuzzy matching
+        candidates = []
+        for char in all_characters:
+            char_name = char['name']
+            
+            # Normalize stored name
+            normalized_char_name = normalize_arabic_characters(char_name)
+            
+            # Calculate name similarity
+            name_similarity = fuzz.ratio(name, normalized_char_name) / 100.0
+            
+            
+            # Combined similarity score using configured weights
+            from ai_workflow.src.configs import FUZZY_MATCHING_CONFIG
+            score = (name_similarity * FUZZY_MATCHING_CONFIG['weights']['name_similarity'])
+            
+            if score >= similarity_threshold:
+                candidates.append({
+                    **char,
+                    'similarity_score': score,
+                    'name_similarity': name_similarity,
+                })
+        
+        # Sort by similarity score (highest first)
+        candidates.sort(key=lambda x: x['similarity_score'], reverse=True)
+        
+        return candidates
+
     def get_all_characters(self) -> List[Dict[str, Any]]:
         """
         Retrieve all character profiles.
@@ -190,7 +238,7 @@ class CharacterDatabase:
     
     def search_characters(self, query: str) -> List[Dict[str, Any]]:
         """
-        Search characters by name or hint in profile.
+        Search characters by name in profile.
         
         Args:
             query: Search query
@@ -203,9 +251,9 @@ class CharacterDatabase:
             cursor.execute("""
                 SELECT id, name, profile_json
                 FROM characters
-                WHERE name LIKE ? OR JSON_EXTRACT(profile_json, '$.hint') LIKE ?
+                WHERE name LIKE ?
                 ORDER BY name
-            """, (f'%{query}%', f'%{query}%'))
+            """, (f'%{query}%',))
             
             characters = []
             for row in cursor.fetchall():
