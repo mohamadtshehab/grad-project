@@ -31,7 +31,7 @@ def test_database_functionality():
         "relationships": ["partner of Fatima", "suspect of Ali"]
     }
     
-    character_id1 = db.insert_character("أحمد", profile1, "the detective from Cairo")
+    character_id1 = db.insert_character(profile1)
     print(f"Inserted character with ID: {character_id1}")
     
     # Test 2: Insert another character with same name
@@ -46,14 +46,14 @@ def test_database_functionality():
         "relationships": ["neighbor of victim", "friend of suspect"]
     }
     
-    character_id2 = db.insert_character("أحمد", profile2, "the witness from the market")
+    character_id2 = db.insert_character(profile2)
     print(f"Inserted second character with ID: {character_id2}")
     
     # Test 3: Retrieve character by ID
     print("\n3. Testing character retrieval by ID...")
     character = db.get_character(character_id1)
     if character:
-        print(f"Retrieved character: {character['name']}")
+        print(f"Retrieved character: {character['profile']['name']}")
         print(f"Profile: {character['profile']['role']}, {character['profile']['age']} years old")
     else:
         print("Failed to retrieve character")
@@ -63,7 +63,7 @@ def test_database_functionality():
     characters = db.find_characters_by_name("أحمد")
     print(f"Found {len(characters)} characters named أحمد:")
     for char in characters:
-        print(f"  - {char['name']}: {char['profile']['role']}")
+        print(f"  - {char['profile']['name']}: {char['profile']['role']}")
     
     # Test 5: Update character profile
     print("\n5. Testing character profile update...")
@@ -79,14 +79,14 @@ def test_database_functionality():
     search_results = db.search_characters("detective")
     print(f"Found {len(search_results)} characters matching 'detective':")
     for char in search_results:
-        print(f"  - {char['name']}")
+        print(f"  - {char['profile']['name']}")
     
     # Test 7: Get all characters
     print("\n7. Testing get all characters...")
     all_characters = db.get_all_characters()
     print(f"Total characters in database: {len(all_characters)}")
     for char in all_characters:
-        print(f"  - {char['name']}: {char['profile']['role']}")
+        print(f"  - {char['profile']['name']}: {char['profile']['role']}")
     
     # Test 8: Get character count
     print("\n8. Testing character count...")
@@ -164,7 +164,7 @@ def test_no_sql_functionality():
         }
     }
     
-    character_id = db.insert_character("فاطمة", flexible_profile, "the teacher from Alexandria")
+    character_id = db.insert_character(flexible_profile)
     print(f"Inserted flexible profile for فاطمة with ID: {character_id}")
     
     # Retrieve and verify the flexible structure

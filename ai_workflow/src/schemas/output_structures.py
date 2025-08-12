@@ -1,15 +1,11 @@
 from pydantic import BaseModel, Field
 from typing import List
 
-class Character(BaseModel):
-    """Single character with name."""
-    name: str = Field(description="اسم الشخصية")
+class NameList(BaseModel):
+    """Use this schema to format the character list output."""
+    characters: List[str] = Field(description="قائمة بالشخصيات الموجودة في النص")
 
-class NameQuerier(BaseModel):
-    """Use this schema to format the name query output."""
-    characters: list[Character] = Field(description="قائمة بالشخصيات الموجودة في النص")
-    
-class ProfileData(BaseModel):
+class Profile(BaseModel):
     """Single profile data for a character."""
     
     name: str = Field(
@@ -17,47 +13,58 @@ class ProfileData(BaseModel):
     )
     
     age: str = Field(
+        default="",
         description="العمر التقديري أو الوصف الدال عليه إن وُجد في النص؛ إذا لم يكن واضحًا، تبقى القيمة كما هي"
     )
     
     role: str = Field(
+        default="",
         description="الدور الذي تلعبه الشخصية في النص (رئيسية، ثانوية، راوية، إلخ) إذا توفر في النص"
     )
     
     physical_characteristics: List[str] = Field(
+        default_factory=list,
         description="الصفات الجسدية التي وُصفت بها الشخصية بشكل صريح أو ضمني، بصيغة قائمة من النصوص"
     )
     
     personality: str = Field(
+        default="",
         description="الصفات النفسية أو السلوكية التي ظهرت في النص بوضوح أو تلميح"
     )
     
     events: List[str] = Field(
+        default_factory=list,
         description="قائمة بالأحداث المحورية والمهمة التي أثّرت على تطور الشخصية أو القصة؛ يتم تجاهل الأحداث التفصيلية أو العادية"
     )
     
     relations: List[str] = Field(
+        default_factory=list,
         description="قائمة بالعلاقات مع الشخصيات الأخرى بصيغة 'اسم_الشخصية: نوع_العلاقة' مثل 'سليم: صداقة'"
     )
     
     aliases: List[str] = Field(
+        default_factory=list,
         description="قائمة بالأسماء أو الألقاب الأخرى التي يُشار بها إلى الشخصية في النص"
     )
-    
+
+
+class Character(BaseModel):
     id: str = Field(
         description="معرف فريد للشخصية؛ لا يتغير خلال التحديث"
     )
+    profile: Profile = Field(
+        description="بروفايل الشخصية المحدث"
+    )
 
-
-class ProfileRefresher(BaseModel):
+class CharacterList(BaseModel):
     """Use this schema to format the profile refresher output."""
-    profiles: List[ProfileData] = Field(description="قائمة من البروفايلات المحدثة للشخصيات")
+    profiles: List[Profile] = Field(description="قائمة من البروفايلات المحدثة للشخصيات")
 
 class Summary(BaseModel):
     """Use this schema to format the summary output."""
     summary: str = Field(description="ملخص النص")
 
-class BookNameExtractor(BaseModel):
+class Book(BaseModel):
     """Use this schema to format the book name extraction output."""
     book_name: str = Field(description="اسم الكتاب المستخرج من محتوى الملف")
     confidence: str = Field(description="مستوى الثقة في استخراج اسم الكتاب (عالي، متوسط، منخفض)")
@@ -70,7 +77,6 @@ class TextQualityAssessment(BaseModel):
     issues: List[str] = Field(description="قائمة بالمشاكل المكتشفة في النص")
     suggestions: List[str] = Field(description="قائمة بالاقتراحات لتحسين جودة النص")
     reasoning: str = Field(description="التفسير المنطقي لتقييم جودة النص")
-
 
 class TextClassification(BaseModel):
     """Use this schema to format the text classification output."""
@@ -86,5 +92,5 @@ class EmptyProfileValidation(BaseModel):
     has_empty_profiles: bool = Field(description="هل توجد بروفايلات فارغة")
     empty_profiles: List[str] = Field(description="قائمة بأسماء البروفايلات الفارغة")
     suggestions: List[str] = Field(description="اقتراحات لتحسين البروفايلات")
-    profiles: List[ProfileData] = Field(description="قائمة من البروفايلات المحدثة للشخصيات")
+    profiles: List[Profile] = Field(description="قائمة من البروفايلات المحدثة للشخصيات")
     validation_score: float = Field(description="درجة جودة البروفايلات من 0 إلى 1")

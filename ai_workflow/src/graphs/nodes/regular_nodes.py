@@ -6,9 +6,8 @@ from ai_workflow.src.preprocessors.text_splitters import TextChunker
 from ai_workflow.src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
 from ai_workflow.src.preprocessors.metadata_remover import remove_book_metadata
 from ai_workflow.src.databases.database import character_db
-from ai_workflow.src.schemas.data_classes import Profile, TextQualityAssessment, TextClassification, EmptyProfileValidation
-import os
-import random
+from ai_workflow.src.schemas.output_structures import *
+import os 
 
 def language_checker(state : State):
     """
@@ -129,10 +128,8 @@ def second_name_querier(state: State):
     
     response = chain.invoke(chain_input)
     
-    characters = response.characters if hasattr(response, 'characters') else []
-    
     return {
-        'last_appearing_characters': characters
+        'last_appearing_characters': response.characters
     } 
 
 
@@ -144,60 +141,35 @@ def profile_retriever_creator(state: State):
     """
     last_appearing_characters = state['last_appearing_characters']
     
-    profiles = []
+    characters = []
     
     for character in last_appearing_characters:
-        name = character.name
+        name = character.profile.name
         
         existing_characters = character_db.find_characters_by_name(name)
         
         if existing_characters:
-            # create the data dictionary that will be send to the LLM
+            # Convert database results to Character objects
             for char in existing_characters:
-                profile_data = char['profile']
-                profile = Profile(
-                    name=char['name'],
-                    age=profile_data['age'],
-                    role=profile_data['role'],
-                    physical_characteristics=profile_data['physical_characteristics'],
-                    personality=profile_data['personality'],
-                    events=profile_data['events'],
-                    relationships=profile_data['relationships'],
-                    aliases=profile_data['aliases'],
-                    id=char['id']
-                )
-                profiles.append(profile)
+                characters.append(Character(
+                    id=char['id'],
+                    profile=Profile(**char['profile'])
+                ))
+            
         else:
-            # create the json object that will be stored in the database (no need for id because it has its own column)
-            new_profile = {
-                'name': name,
-                'age': '',
-                'role': '',
-                'physical_characteristics': [],
-                'personality': '',
-                'events': [],
-                'relationships': [],
-                'aliases': [],
-            }
+            # Create a new profile and insert into database
+            new_profile = Profile(name=name)
             
             # Insert character and get the generated ID
-            character_id = character_db.insert_character(name, new_profile)
+            character_id = character_db.insert_character(new_profile.dict())
             
-            # Create data dictionary that will be send to the LLM
-            profile = Profile(
-                name=name,
-                age='',
-                role='',
-                physical_characteristics=[],
-                personality='',
-                events=[],
-                relationships=[],
-                aliases=[],
-                id=character_id,  # Use the generated ID from database
-            )
-            profiles.append(profile)
+            # Create Character object with the new profile
+            characters.append(Character(
+                id=character_id,
+                profile=new_profile
+            ))
     
-    return {'last_profiles': profiles}
+    return {'last_profiles': characters}
 
 
 def profile_refresher(state: State):
@@ -206,49 +178,28 @@ def profile_refresher(state: State):
     """
     chain_input = {
         "text": str(state['last_summary']),
-        "profiles": str(state['last_profiles'])
+        "profiles": str([char.profile for char in state['last_profiles']])
     }
     chain = profile_update_prompt | profile_update_llm
     response = chain.invoke(chain_input)
     
-    # Extract profiles from the structured output
-    updated_profiles = []
-    for profile_data in response.profiles:
-        # create the data dictionary that will be an item in the list of profiles in the state
-        profile = Profile(
-            name=profile_data.name,
-            age=profile_data.age,
-            role=profile_data.role,  # Use the role determined by the LLM with tool
-            physical_characteristics=profile_data.physical_characteristics,
-            personality=profile_data.personality,
-            events=profile_data.events,
-            relationships=profile_data.relations,
-            aliases=profile_data.aliases,
-            id=profile_data.id
-        )
-        updated_profiles.append(profile)
+    # Update database with new profile data
+    updated_characters = []
+    for i, profile in enumerate(response.profiles):
+        # Get the existing character ID
+        existing_character = state['last_profiles'][i]
         
-        # create the json object that will be updated in the database
-        updated_profile_dict = {
-            'name': profile_data.name,
-            'age': profile_data.age,
-            'role': profile_data.role,  # Use the role determined by the LLM with tool
-            'physical_characteristics': profile_data.physical_characteristics,
-            'personality': profile_data.personality,
-            'events': profile_data.events,
-            'relationships': profile_data.relations,
-            'aliases': profile_data.aliases,
-        }
-    
-        # Only update if the profile has a valid ID
-        if profile_data.id:
-            character_db.update_character(
-                profile_data.id,
-                updated_profile_dict
-            )
+        # Update the database
+        character_db.update_character(existing_character.id, profile.dict())
+        
+        # Create updated Character object
+        updated_characters.append(Character(
+            id=existing_character.id,
+            profile=profile
+        ))
     
     return {
-        'last_profiles': updated_profiles,
+        'last_profiles': updated_characters,
     }
 
 def chunk_updater(state: State):
@@ -275,7 +226,7 @@ def summarizer(state: State):
     context = str(state['last_summary'][2 * third_of_length_of_last_summary:]) + " " + str(state['current_chunk'])
     chain_input = {
         "text": context,
-        "names": str(state['last_appearing_characters'])
+        "names": str([char.profile.name for char in state['last_appearing_characters']])
     }
     chain = summary_prompt | summary_llm
     response = chain.invoke(chain_input)
@@ -287,37 +238,9 @@ def text_quality_assessor(state):
     """
     Node that assesses the quality of Arabic text using Gemini AI.
     """
-    file_path = state['file_path']
-    if not file_path or not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
+    # Use pre-generated validation chunks from state
+    formatted_chunks = state.get('input_validation_chunks', '')
     
-    with open(file_path, 'r', encoding='utf-8') as file:
-        raw_text_lines = file.readlines()
-    
-    def get_non_overlapping_chunks(lines, num_lines_per_chunk):
-        """
-        Splits a list of lines into non-overlapping chunks.
-        """
-        chunks = []
-        for i in range(0, len(lines), num_lines_per_chunk):
-            chunk = "".join(lines[i:i + num_lines_per_chunk])
-            chunks.append(chunk)
-        return chunks
-
-    all_chunks = get_non_overlapping_chunks(raw_text_lines, 20) # 20 lines per chunk
-    
-    # Select 10 random, non-overlapping chunks
-    num_chunks_to_select = 10
-    if len(all_chunks) > num_chunks_to_select:
-        random_chunks = random.sample(all_chunks, num_chunks_to_select)
-    else:
-        random_chunks = all_chunks
-
-    # Format the selected chunks for the LLM
-    formatted_chunks = ""
-    for i, chunk in enumerate(random_chunks):
-        formatted_chunks += f"Chunk {i+1}:\n{chunk}\n"
-
     chain_input = {
         "text": formatted_chunks
     }
@@ -342,37 +265,9 @@ def text_classifier(state: State):
     """
     Node that classifies the input text as literary or non-literary using Gemini AI.
     """
-    file_path = state['file_path']
-    if not file_path or not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
+    # Use pre-generated validation chunks from state
+    formatted_chunks = state.get('input_validation_chunks', '')
     
-    with open(file_path, 'r', encoding='utf-8') as file:
-        raw_text_lines = file.readlines()
-    
-    def get_non_overlapping_chunks(lines, num_lines_per_chunk):
-        """
-        Splits a list of lines into non-overlapping chunks.
-        """
-        chunks = []
-        for i in range(0, len(lines), num_lines_per_chunk):
-            chunk = "".join(lines[i:i + num_lines_per_chunk])
-            chunks.append(chunk)
-        return chunks
-
-    all_chunks = get_non_overlapping_chunks(raw_text_lines, 20) # 20 lines per chunk
-    
-    # Select 10 random, non-overlapping chunks
-    num_chunks_to_select = 10
-    if len(all_chunks) > num_chunks_to_select:
-        random_chunks = random.sample(all_chunks, num_chunks_to_select)
-    else:
-        random_chunks = all_chunks
-
-    # Format the selected chunks for the LLM
-    formatted_chunks = ""
-    for i, chunk in enumerate(random_chunks):
-        formatted_chunks += f"Chunk {i+1}:\n{chunk}\n"
-
     chain_input = {
         "text": formatted_chunks
     }
@@ -399,24 +294,15 @@ def empty_profile_validator(state: State):
     """
     Node that validates Empty profiles and Suggest Changes.
     """
-    if not state['last_profiles']:
-        return {
-            'empty_profile_validation': EmptyProfileValidation(
-                has_empty_profiles=False,
-                empty_profiles=[],
-                suggestions=["لا توجد بروفايلات للتحقق منها"],
-                profiles=[],
-                validation_score=1.0
-            )
-        }
-    
     chain_input = {
         "text": str(state['last_summary']),
-        "profiles": str(state['last_profiles'])
+        "profiles": str([char.profile for char in state['last_profiles']])
     }
     
     chain = empty_profile_validation_prompt | empty_profile_validation_llm
+    
     response = chain.invoke(chain_input)
+    
     empty_profile_validation = EmptyProfileValidation(
         has_empty_profiles= response.has_empty_profiles,
         empty_profiles=response.empty_profiles,
@@ -424,41 +310,23 @@ def empty_profile_validator(state: State):
         profiles = response.profiles,
         validation_score=response.validation_score
     )
-    updated_profiles = []
-    for profile_data in response.profiles:
-        # create the data dictionary that will be an item in the list of profiles in the state
-        profile = Profile(
-            name=profile_data.name,
-            age=profile_data.age,
-            role=profile_data.role,  # Use the role determined by the LLM with tool
-            physical_characteristics=profile_data.physical_characteristics,
-            personality=profile_data.personality,
-            events=profile_data.events,
-            relationships=profile_data.relations,
-            aliases=profile_data.aliases,
-            id=profile_data.id
-        )
-        updated_profiles.append(profile)
-        
-        # create the json object that will be updated in the database
-        updated_profile_dict = {
-            'name': profile_data.name,
-            'age': profile_data.age,
-            'role': profile_data.role,  # Use the role determined by the LLM with tool
-            'physical_characteristics': profile_data.physical_characteristics,
-            'personality': profile_data.personality,
-            'events': profile_data.events,
-            'relationships': profile_data.relations,
-            'aliases': profile_data.aliases,
-        }
     
-        # Only update if the profile has a valid ID
-        if profile_data.id:
-            character_db.update_character(
-                profile_data.id,
-                updated_profile_dict
-            )
+    # Update database and create updated Character objects
+    updated_characters = []
+    for i, profile in enumerate(response.profiles):
+        # Get the existing character ID
+        existing_character = state['last_profiles'][i]
+        
+        # Update the database
+        character_db.update_character(existing_character.id, profile.dict())
+        
+        # Create updated Character object
+        updated_characters.append(Character(
+            id=existing_character.id,
+            profile=profile
+        ))
+    
     return {
         'empty_profile_validation': empty_profile_validation,
-        'last_profiles': updated_profiles  # Also update last_profiles with the validated profiles
+        'last_profiles': updated_characters
     }

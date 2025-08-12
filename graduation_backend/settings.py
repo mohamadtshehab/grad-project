@@ -33,20 +33,17 @@ THIRD_PARTY_APPS = [
     'corsheaders',
     'django_filters',
     'channels',
-    'chunked_upload',
     'debug_toolbar',
     'drf_yasg',
 ]
 
 LOCAL_APPS = [
-    'authentication',
-    'myadmin',
-    'customer',
+    'utils',
+    'user',
     'books',
-    'store',
-    'chunked_uploads',
     'chunks',
-    'profiles',
+    'characters',
+    'authentication',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -124,7 +121,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Using default Django User model
+# Custom User model
+AUTH_USER_MODEL = 'user.User'
 
 # REST Framework settings
 REST_FRAMEWORK = {

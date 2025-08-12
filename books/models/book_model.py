@@ -1,8 +1,9 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from customer.models import Customer
-from myadmin.models import Admin
+from user.models import User
+import uuid
 import os
+
 
 def validate_book_file(value):
     """
@@ -17,22 +18,59 @@ def validate_book_file(value):
             f'Uploaded file has extension: {ext}'
         )
 
+
 def book_upload_path(instance, filename):
-    if instance.customer:
-        return f'books/customer_{instance.customer.id}/{filename}'
-    elif instance.admin:
-        return f'books/admin_{instance.admin.id}/{filename}'
+    """Generate upload path for book files"""
+    return f'books/user_{instance.user_id.id}/{filename}'
+
 
 class Book(models.Model):
-    title = models.CharField(max_length=255)
-    author = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    file = models.FileField(upload_to=book_upload_path, validators=[validate_book_file])
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='books', null=True, blank=True)
-    admin = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True, related_name='uploaded_books')
+    """
+    Model for storing uploaded books
+    """
+    book_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255, help_text="Book title")
+    author = models.CharField(max_length=255, null=True, blank=True, help_text="Book author")
+    description = models.TextField(null=True, blank=True, help_text="Book description")
+    file = models.FileField(
+        upload_to=book_upload_path, 
+        validators=[validate_book_file],
+        help_text="Book file (epub or txt)"
+    )
+    
+    # Foreign key to User
+    user_id = models.ForeignKey(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='books',
+        help_text="User who uploaded the book"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
-
+    
+    class Meta:
+        db_table = 'book'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user_id']),
+            models.Index(fields=['title']),
+            models.Index(fields=['created_at']),
+        ]
+    
     def __str__(self):
-        return self.title
+        return f"{self.title} by {self.author or 'Unknown'}"
+    
+    @property
+    def file_size(self):
+        """Get file size in bytes"""
+        try:
+            return self.file.size
+        except:
+            return 0
+    
+    @property
+    def file_extension(self):
+        """Get file extension"""
+        return os.path.splitext(self.file.name)[1].lower() if self.file else None
