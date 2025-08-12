@@ -359,17 +359,20 @@ def text_classifier(state: State):
             chunks.append(chunk)
         return chunks
 
-    all_chunks = get_non_overlapping_chunks(raw_text_lines, 20)
+    all_chunks = get_non_overlapping_chunks(raw_text_lines, 20) # 20 lines per chunk
     
+    # Select 10 random, non-overlapping chunks
     num_chunks_to_select = 10
     if len(all_chunks) > num_chunks_to_select:
         random_chunks = random.sample(all_chunks, num_chunks_to_select)
     else:
         random_chunks = all_chunks
 
+    # Format the selected chunks for the LLM
     formatted_chunks = ""
     for i, chunk in enumerate(random_chunks):
         formatted_chunks += f"Chunk {i+1}:\n{chunk}\n"
+
     chain_input = {
         "text": formatted_chunks
     }
