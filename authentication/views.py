@@ -3,7 +3,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
+from .permissions import IsNotAuthenticated
+from .throttling import PasswordResetThrottle
 from .serializers import (
     RegisterSerializer, LoginSerializer, ProfileSerializer,
     PasswordChangeSerializer, PasswordResetRequestSerializer,
@@ -136,17 +137,10 @@ class PasswordChangeView(APIView):
 
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [PasswordResetThrottle]
 
     def post(self, request):
         """Request password reset - only for unauthenticated users"""
-        # Ensure only unauthenticated users can request password reset
-        if request.user.is_authenticated:
-            return Response({
-                "status": "error",
-                "en": "Authenticated users cannot request password reset",
-                "ar": "لا يمكن للمستخدمين المصادق عليهم طلب إعادة تعيين كلمة المرور",
-                "message": "You are already logged in. Use password change instead."
-            }, status=status.HTTP_400_BAD_REQUEST)
         
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -252,15 +246,6 @@ class PasswordResetConfirmView(APIView):
 
     def post(self, request):
         """Confirm password reset with code - only for unauthenticated users"""
-        # Ensure only unauthenticated users can confirm password reset
-        if request.user.is_authenticated:
-            return Response({
-                "status": "error",
-                "en": "Authenticated users cannot confirm password reset",
-                "ar": "لا يمكن للمستخدمين المصادق عليهم تأكيد إعادة تعيين كلمة المرور",
-                "message": "You are already logged in. Use password change instead."
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
