@@ -169,7 +169,15 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Dubai'
 
-# Email settings removed
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_HOST_USER = '38908623c513e5'
+EMAIL_HOST_PASSWORD = '15bb8fb183c683'
+EMAIL_PORT = '2525'
+
+# For development/testing, you can use console backend instead
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Chunked upload settings
 CHUNKED_UPLOAD_ABSTRACT_MODEL = False
@@ -180,6 +188,10 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+
+
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True 
+
+APPEND_SLASH = True
