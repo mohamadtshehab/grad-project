@@ -234,22 +234,22 @@ class Command(BaseCommand):
             book_id = chunk.book_id.book_id
             if book_id in book_characters:
                 available_characters = book_characters[book_id]
-                mentioned_characters = random.choices(
-                    available_characters, 
-                    k=random.randint(1, min(3, len(available_characters)))
-                )
-                
-                for character in mentioned_characters:
-                    ChunkCharacter.objects.create(
-                        chunk_id=chunk,
-                        character_id=character,
-                        mention_count=random.randint(1, 5),
-                        position_info={
-                            "positions": [random.randint(0, 100)],
-                            "context": "mentioned in narrative"
-                        }
-                    )
-                    relationships_count += 1
+                # Use sample to avoid duplicates, but ensure we don't exceed available characters
+                num_characters = min(random.randint(1, 3), len(available_characters))
+                if num_characters > 0:
+                    mentioned_characters = random.sample(available_characters, num_characters)
+                    
+                    for character in mentioned_characters:
+                        ChunkCharacter.objects.create(
+                            chunk_id=chunk,
+                            character_id=character,
+                            mention_count=random.randint(1, 5),
+                            position_info={
+                                "positions": [random.randint(0, 100)],
+                                "context": "mentioned in narrative"
+                            }
+                        )
+                        relationships_count += 1
                     
         self.stdout.write(self.style.SUCCESS(f"✅ Created {relationships_count} chunk-character relationships!"))
 
