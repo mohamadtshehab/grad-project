@@ -142,6 +142,15 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',      # 100 requests per hour for anonymous users
+        'user': '1000/hour',     # 1000 requests per hour for authenticated users
+        'password_reset': '5/hour',  # 5 password reset requests per hour per IP
+    }
 }
 
 # JWT settings
