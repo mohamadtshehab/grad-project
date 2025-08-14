@@ -118,6 +118,11 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+FILE_UPLOAD_PERMISSIONS = 0o644
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -150,14 +155,23 @@ REST_FRAMEWORK = {
         'anon': '100/hour',      # 100 requests per hour for anonymous users
         'user': '1000/hour',     # 1000 requests per hour for authenticated users
         'password_reset': '5/hour',  # 5 password reset requests per hour per IP
-    }
+    },
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FileUploadParser',
+    ],
 }
 
 # JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),  # Extended from 15 minutes to 24 hours
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   # Extended from 1 day to 7 days
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'ROTATE_REFRESH_TOKENS': True,                 # Generate new refresh token on each use
+    'BLACKLIST_AFTER_ROTATION': True,              # Blacklist old refresh tokens
+    'UPDATE_LAST_LOGIN': True,                      # Update last login timestamp
 }
 
 # Channel layers configuration
@@ -184,6 +198,7 @@ EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
 EMAIL_HOST_USER = '38908623c513e5'
 EMAIL_HOST_PASSWORD = '15bb8fb183c683'
 EMAIL_PORT = '2525'
+DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
 
 # For development/testing, you can use console backend instead
 # EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

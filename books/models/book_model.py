@@ -7,14 +7,14 @@ import os
 
 def validate_book_file(value):
     """
-    Validate that uploaded file is either epub or txt
+    Validate that uploaded file is EPUB only
     """
     ext = os.path.splitext(value.name)[1].lower()
-    valid_extensions = ['.epub', '.txt']
+    valid_extensions = ['.epub']
     
     if ext not in valid_extensions:
         raise ValidationError(
-            f'Only {", ".join(valid_extensions)} files are allowed. '
+            f'Only EPUB files are allowed. '
             f'Uploaded file has extension: {ext}'
         )
 
@@ -28,6 +28,15 @@ class Book(models.Model):
     """
     Model for storing uploaded books
     """
+    
+    # Processing status choices
+    PROCESSING_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+    
     book_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255, help_text="Book title")
     author = models.CharField(max_length=255, null=True, blank=True, help_text="Book author")
@@ -35,7 +44,22 @@ class Book(models.Model):
     file = models.FileField(
         upload_to=book_upload_path, 
         validators=[validate_book_file],
-        help_text="Book file (epub or txt)"
+        help_text="Book file (EPUB only)"
+    )
+    
+    # Processing status
+    processing_status = models.CharField(
+        max_length=20,
+        choices=PROCESSING_STATUS_CHOICES,
+        default='pending',
+        help_text="Processing status of the book"
+    )
+    
+    # Error message if processing failed
+    processing_error = models.TextField(
+        null=True, 
+        blank=True, 
+        help_text="Error message if processing failed"
     )
     
     # Foreign key to User
