@@ -81,6 +81,7 @@ def chunker(state: State):
     chunker = TextChunker(chunk_size=5000, chunk_overlap=200)
     
     chunks = chunker.chunk_text_arabic_optimized(content_text)
+
     
     def chunk_generator():
         for chunk in chunks:
@@ -204,9 +205,63 @@ def profile_retriever_creator(state: State):
     return {'last_profiles': profiles}
 
 
+# def profile_refresher(state: State):
+#     """
+#     Node that refreshes the profiles based on the current chunk.
+#     """
+#     chain_input = {
+#         "text": str(state['last_summary']),
+#         "profiles": str(state['last_profiles'])
+#     }
+#     chain = profile_update_prompt | profile_update_llm
+#     response = chain.invoke(chain_input)
+    
+#     # Extract profiles from the structured output
+#     updated_profiles = []
+#     for profile_data in response.profiles:
+#         # create the data dictionary that will be an item in the list of profiles in the state
+#         profile = Profile(
+#             name=profile_data.name,
+#             hint=profile_data.hint,
+#             age=profile_data.age,
+#             role=profile_data.role,  # Use the role determined by the LLM with tool
+#             physical_characteristics=profile_data.physical_characteristics,
+#             personality=profile_data.personality,
+#             events=profile_data.events,
+#             relationships=profile_data.relations,
+#             aliases=profile_data.aliases,
+#             id=profile_data.id
+#         )
+#         updated_profiles.append(profile)
+        
+#         # create the json object that will be updated in the database
+#         updated_profile_dict = {
+#             'name': profile_data.name,
+#             'hint': profile_data.hint,
+#             'age': profile_data.age,
+#             'role': profile_data.role,  # Use the role determined by the LLM with tool
+#             'physical_characteristics': profile_data.physical_characteristics,
+#             'personality': profile_data.personality,
+#             'events': profile_data.events,
+#             'relationships': profile_data.relations,
+#             'aliases': profile_data.aliases,
+#         }
+    
+#         # Only update if the profile has a valid ID
+#         if profile_data.id:
+#             character_db.update_character(
+#                 profile_data.id,
+#                 updated_profile_dict
+#             )
+    
+#     return {
+#         'last_profiles': updated_profiles,
+#     }
+
 def profile_refresher(state: State):
     """
     Node that refreshes the profiles based on the current chunk.
+    Only merges updates returned by the LLM with existing profiles.
     """
     chain_input = {
         "text": str(state['last_summary']),
@@ -214,48 +269,82 @@ def profile_refresher(state: State):
     }
     chain = profile_update_prompt | profile_update_llm
     response = chain.invoke(chain_input)
-    
-    # Extract profiles from the structured output
+    print("=== LLM Raw Output ===")
+    for p in response.profiles:
+       print(f"ID: {p.id}")
+       print(f"Name: {p.name}")
+       print(f"Hint: {p.hint}")
+       print(f"Age: {p.age}")
+       print(f"Role: {p.role}")
+       print(f"Physical: {p.physical_characteristics}")
+       print(f"Personality: {p.personality}")
+       print(f"Events: {p.events}")
+       print(f"Relations: {p.relations}")
+       print(f"Aliases: {p.aliases}")
+       print("-----------------------------")
+  
     updated_profiles = []
-    for profile_data in response.profiles:
-        # create the data dictionary that will be an item in the list of profiles in the state
-        profile = Profile(
-            name=profile_data.name,
-            hint=profile_data.hint,
-            age=profile_data.age,
-            role=profile_data.role,  # Use the role determined by the LLM with tool
-            physical_characteristics=profile_data.physical_characteristics,
-            personality=profile_data.personality,
-            events=profile_data.events,
-            relationships=profile_data.relations,
-            aliases=profile_data.aliases,
-            id=profile_data.id
+
+   
+    old_by_id = {p.id: p for p in state['last_profiles']}
+
+    for new_profile_data in response.profiles:
+        old_profile = old_by_id.get(new_profile_data.id)
+        if not old_profile:
+            continue  
+
+        name = new_profile_data.name or old_profile.name
+        hint = new_profile_data.hint or old_profile.hint
+        age = new_profile_data.age or old_profile.age
+        role = new_profile_data.role or old_profile.role
+
+        def merge_list(old_list, new_list):
+            if not new_list:
+                return old_list
+            return list(set(old_list + new_list))
+
+        events = merge_list(old_profile.events, new_profile_data.events)
+        relationships = merge_list(old_profile.relationships, new_profile_data.relations)
+        aliases = merge_list(old_profile.aliases, new_profile_data.aliases)
+        physical_characteristics = merge_list(old_profile.physical_characteristics, new_profile_data.physical_characteristics)
+        personality = merge_list(old_profile.personality if isinstance(old_profile.personality, list) else [old_profile.personality],
+                                 new_profile_data.personality if isinstance(new_profile_data.personality, list) else [new_profile_data.personality])
+
+        merged_profile = Profile(
+            id=old_profile.id,
+            name=name,
+            hint=hint,
+            age=age,
+            role=role,
+            events=events,
+            relationships=relationships,
+            aliases=aliases,
+            physical_characteristics=physical_characteristics,
+            personality=personality if len(personality) > 1 else personality[0]
         )
-        updated_profiles.append(profile)
-        
-        # create the json object that will be updated in the database
+
+        updated_profiles.append(merged_profile)
+
         updated_profile_dict = {
-            'name': profile_data.name,
-            'hint': profile_data.hint,
-            'age': profile_data.age,
-            'role': profile_data.role,  # Use the role determined by the LLM with tool
-            'physical_characteristics': profile_data.physical_characteristics,
-            'personality': profile_data.personality,
-            'events': profile_data.events,
-            'relationships': profile_data.relations,
-            'aliases': profile_data.aliases,
+            'name': merged_profile.name,
+            'hint': merged_profile.hint,
+            'age': merged_profile.age,
+            'role': merged_profile.role,
+            'events': merged_profile.events,
+            'relationships': merged_profile.relationships,
+            'aliases': merged_profile.aliases,
+            'physical_characteristics': merged_profile.physical_characteristics,
+            'personality': merged_profile.personality,
         }
-    
-        # Only update if the profile has a valid ID
-        if profile_data.id:
-            character_db.update_character(
-                profile_data.id,
-                updated_profile_dict
-            )
-    
+
+        if merged_profile.id:
+            character_db.update_character(merged_profile.id, updated_profile_dict)
+
     return {
-        'last_profiles': updated_profiles,
+        'last_profiles': updated_profiles
     }
+
+
 
 def chunk_updater(state: State):
     """
@@ -263,9 +352,12 @@ def chunk_updater(state: State):
     """
     try:
         current_chunk = next(state['chunk_generator'])
+        #chunk_num = state.get('chunk_num', 0) + 1
+        
         return {
             'previous_chunk': state.get('current_chunk', ''),
             'current_chunk': current_chunk,
+             #'chunk_num': chunk_num,
             'no_more_chunks': False
         }
     except StopIteration:
