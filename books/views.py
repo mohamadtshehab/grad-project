@@ -21,7 +21,6 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import transaction
 
-logger = logging.getLogger(__name__)
 
 
 
@@ -60,8 +59,6 @@ class BookViewSet(viewsets.ModelViewSet):
             if serializer.is_valid():
                 book = serializer.save()
                 
-                # Log successful upload
-                logger.info(f"Book uploaded successfully: {book.book_id} by user {request.user.id}")
                 
                 # Create a Job for novel name extraction and enqueue task
                 with transaction.atomic():
@@ -82,7 +79,6 @@ class BookViewSet(viewsets.ModelViewSet):
                             filename=book.file.name.split('/')[-1],
                         )
                     except Exception as e:
-                        logger.error(f"Failed to enqueue extract_novel_name for book {book.book_id}: {e}")
                         job.status = Job.Status.FAILED
                         job.error = str(e)
                         job.finished_at = timezone.now()
@@ -112,7 +108,6 @@ class BookViewSet(viewsets.ModelViewSet):
                 }, status=status.HTTP_400_BAD_REQUEST)
                 
         except Exception as e:
-            logger.error(f"Error uploading book for user {request.user.id}: {str(e)}")
             return Response({
                 "status": "error",
                 "en": "Failed to upload book",
@@ -143,7 +138,6 @@ class BookViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            logger.error(f"Error retrieving books for user {request.user.id}: {str(e)}")
             return Response({
                 "status": "error",
                 "en": "Failed to retrieve books",
@@ -165,7 +159,6 @@ class BookViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            logger.error(f"Error getting book details for user {request.user.id}: {str(e)}")
             return Response({
                 "status": "error",
                 "en": "Failed to get book details",
@@ -180,8 +173,6 @@ class BookViewSet(viewsets.ModelViewSet):
             book.is_deleted = True
             book.save()
             
-            # Log deletion
-            logger.info(f"Book soft deleted: {book.book_id} by user {request.user.id}")
             
             return Response({
                 "status": "success",
@@ -190,7 +181,6 @@ class BookViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            logger.error(f"Error deleting book for user {request.user.id}: {str(e)}")
             return Response({
                 "status": "error",
                 "en": "Failed to delete book",
@@ -235,13 +225,10 @@ class BookViewSet(viewsets.ModelViewSet):
                 filename=os.path.basename(book.file.name)
             )
             
-            # Log download
-            logger.info(f"Book downloaded: {book.book_id} by user {request.user.id}")
             
             return response
             
         except Exception as e:
-            logger.error(f"Error downloading book for user {request.user.id}: {str(e)}")
             return Response({
                 "status": "error",
                 "en": "Failed to download book",
@@ -264,7 +251,6 @@ class BookViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            logger.error(f"Error getting book status for user {request.user.id}: {str(e)}")
             return Response({
                 "status": "error",
                 "en": "Failed to get book status",
