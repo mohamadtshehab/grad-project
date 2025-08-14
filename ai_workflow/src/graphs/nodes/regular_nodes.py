@@ -402,10 +402,10 @@ def text_quality_assessor(state):
             chunks.append(chunk)
         return chunks
 
-    all_chunks = get_non_overlapping_chunks(raw_text_lines, 20) # 20 lines per chunk
+    all_chunks = get_non_overlapping_chunks(raw_text_lines, 10) # 20 lines per chunk
     
     # Select 10 random, non-overlapping chunks
-    num_chunks_to_select = 10
+    num_chunks_to_select = 3
     if len(all_chunks) > num_chunks_to_select:
         random_chunks = random.sample(all_chunks, num_chunks_to_select)
     else:
@@ -445,29 +445,39 @@ def text_classifier(state: State):
         raise FileNotFoundError(f"File not found: {file_path}")
     
     with open(file_path, 'r', encoding='utf-8') as file:
-        raw_text_lines = file.readlines()
+        raw_text = file.read()
     
-    def get_non_overlapping_chunks(lines, num_lines_per_chunk):
+    # Split the raw text into a list of words.
+    words = raw_text.split()
+    
+    def get_non_overlapping_word_chunks(all_words, num_words_per_chunk):
         """
-        Splits a list of lines into non-overlapping chunks.
+        Splits a list of words into non-overlapping chunks.
         """
         chunks = []
-        for i in range(0, len(lines), num_lines_per_chunk):
-            chunk = "".join(lines[i:i + num_lines_per_chunk])
+        for i in range(0, len(all_words), num_words_per_chunk):
+            chunk_words = all_words[i:i + num_words_per_chunk]
+            chunk = " ".join(chunk_words) # Join the words back into a single string
             chunks.append(chunk)
         return chunks
 
-    all_chunks = get_non_overlapping_chunks(raw_text_lines, 20)
+    # You can adjust this number to set the desired chunk size in words.
+    num_words_per_chunk = 15
     
+    all_chunks = get_non_overlapping_word_chunks(words, num_words_per_chunk)
+    
+    # Select 10 random, non-overlapping chunks
     num_chunks_to_select = 10
     if len(all_chunks) > num_chunks_to_select:
         random_chunks = random.sample(all_chunks, num_chunks_to_select)
     else:
         random_chunks = all_chunks
 
+    # Format the selected chunks for the LLM
     formatted_chunks = ""
     for i, chunk in enumerate(random_chunks):
         formatted_chunks += f"Chunk {i+1}:\n{chunk}\n"
+
     chain_input = {
         "text": formatted_chunks
     }
