@@ -19,10 +19,10 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from .models import PasswordResetCode
+from .tasks import send_password_reset_email, send_welcome_email
 import logging
 
 User = get_user_model()
-logger = logging.getLogger(__name__)
 
 class RegisterView(APIView):
     permission_classes = [AllowAny]
@@ -31,6 +31,14 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        
+        # Queue welcome email
+        welcome_task = send_welcome_email.delay(
+            user_id=str(user.id),
+            user_email=user.email,
+            user_name=user.name
+        )
+        
         return Response({
             "status": "success",
             "en": "User registered successfully",
@@ -154,20 +162,27 @@ class PasswordResetRequestView(APIView):
             # Create a new password reset code
             reset_code = PasswordResetCode.create_for_user(user)
             
-            # Send email with the reset code
+            # Queue the email sending task
             try:
-                self._send_password_reset_email(user, reset_code.code)
+                # Send email asynchronously using Celery
+                task = send_password_reset_email.delay(
+                    user_id=str(user.id),
+                    reset_code=reset_code.code,
+                    user_email=user.email,
+                    user_name=user.name
+                )
+                
                 
                 return Response({
                     "status": "success",
-                    "en": "Password reset code sent to your email",
-                    "ar": "تم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
-                    "message": f"A {len(reset_code.code)}-digit code has been sent to {email}"
+                    "en": "Password reset code is being sent to your email",
+                    "ar": "يتم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
+                    "message": f"A {len(reset_code.code)}-digit code is being sent to {email}",
+                    "task_id": task.id  # Include task ID for tracking
                 }, status=status.HTTP_200_OK)
                 
             except Exception as e:
-                logger.error(f"Failed to send password reset email to {email}: {str(e)}")
-                # Delete the created code if email fails
+                # Delete the created code if queuing fails
                 reset_code.delete()
                 
                 return Response({
@@ -186,59 +201,7 @@ class PasswordResetRequestView(APIView):
                 "message": "Check your email for password reset instructions"
             }, status=status.HTTP_200_OK)
     
-    def _send_password_reset_email(self, user, code):
-        """Send password reset email with the code"""
-        subject = "Password Reset Code"
-        
-        # HTML email template
-        html_message = f"""
-        <html>
-        <body>
-            <h2>Password Reset Request</h2>
-            <p>Hello {user.name},</p>
-            <p>You have requested to reset your password. Use the following code to complete the process:</p>
-            <div style="background-color: #f4f4f4; padding: 20px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
-                {code}
-            </div>
-            <p>This code will expire in 1 hour.</p>
-            <p>If you didn't request this password reset, please ignore this email.</p>
-            <p>Best regards,<br>Your App Team</p>
-        </body>
-        </html>
-        """
-        
-        # Plain text version
-        plain_message = f"""
-        Password Reset Request
-        
-        Hello {user.name},
-        
-        You have requested to reset your password. Use the following code to complete the process:
-        
-        {code}
-        
-        This code will expire in 1 hour.
-        
-        If you didn't request this password reset, please ignore this email.
-        
-        Best regards,
-        Your App Team
-        """
-        
-        # Send email with fallback handling
-        try:
-            send_mail(
-                subject=subject,
-                message=plain_message,
-                html_message=html_message,
-                from_email=settings.DEFAULT_FROM_EMAIL or 'noreply@yourdomain.com',
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-        except Exception as email_error:
-            logger.error(f"Email sending failed: {str(email_error)}")
-            # Re-raise the error to be handled by the calling method
-            raise
+
 
 
 class PasswordResetConfirmView(APIView):

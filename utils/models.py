@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+import uuid
 
 
 class TimeStampedModel(models.Model):
@@ -10,3 +12,38 @@ class TimeStampedModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class Job(TimeStampedModel):
+	"""Represents a long-running background job processed by Celery."""
+
+	class Status(models.TextChoices):
+		PENDING = "pending", "pending"
+		RUNNING = "running", "running"
+		COMPLETED = "completed", "completed"
+		FAILED = "failed", "failed"
+
+	id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+	user = models.ForeignKey(
+		settings.AUTH_USER_MODEL,
+		on_delete=models.CASCADE,
+		related_name="jobs",
+		null=True,
+		blank=True,
+	)
+	job_type = models.CharField(max_length=100, db_index=True)
+	status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+	progress = models.PositiveSmallIntegerField(default=0)
+	result = models.JSONField(null=True, blank=True)
+	error = models.TextField(blank=True)
+	started_at = models.DateTimeField(null=True, blank=True)
+	finished_at = models.DateTimeField(null=True, blank=True)
+
+	def __str__(self) -> str:
+		return f"Job<{self.id}> {self.job_type} [{self.status}]"
+
+	class Meta:
+		indexes = [
+			models.Index(fields=["user", "job_type"]),
+			models.Index(fields=["status", "created_at"]),
+		]

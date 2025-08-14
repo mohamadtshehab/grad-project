@@ -9,6 +9,8 @@ urlpatterns = [
     path('', lambda request: HttpResponse("Hello World")),
     path('__debug__/', include('debug_toolbar.urls')),
     path('api/auth/', include('authentication.urls')),
+    path('api/books/', include('books.urls')),
+    path('api/', include('utils.urls')),
 ]
 
 # Serve media files in development
