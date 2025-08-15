@@ -1,1 +1,0 @@
-from .customer_permission import IsCustomer
