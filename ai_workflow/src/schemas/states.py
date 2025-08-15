@@ -1,6 +1,5 @@
-from typing import TypedDict
+from typing import TypedDict, Optional
 from langgraph.graph.message import add_messages
-from ai_workflow.src.databases.database import CharacterDatabase
 from ai_workflow.src.schemas.output_structures import *
 from ai_workflow.src.utils import get_validation_chunks
 
@@ -11,10 +10,9 @@ class State(TypedDict):
     chunk_generator: object
     current_chunk: str
     previous_chunk: str
-    input_validation_chunks: str
     last_profiles: list[Character] | None
     last_appearing_characters: list[Character] | None
-    database: CharacterDatabase
+    book_id: Optional[str]
     no_more_chunks: bool
     is_arabic : bool
     last_summary: str
@@ -22,16 +20,15 @@ class State(TypedDict):
     text_classification: TextClassification | None
     empty_profile_validation: EmptyProfileValidation | None
 
-def create_initial_state():
-    """Create the initial state with validation chunks generated."""
+def create_initial_state(book_id: str, file_path: str):
+    """
+    Create the initial state with validation chunks generated.
     
-    file_path = 'ai_workflow/resources/texts/اللص والكلاب.txt'
-    
-    try:
-        input_validation_chunks = get_validation_chunks(file_path)
-    except FileNotFoundError:
-        input_validation_chunks = ""
-    
+    Args:
+        book_id: Optional book ID for character context (will auto-resolve file path)
+        file_path: Optional file path to process (defaults to test file if no book_id)
+    """
+        
     return {
         'file_path': file_path,
         'cleaned_text': '',
@@ -39,10 +36,9 @@ def create_initial_state():
         'chunk_generator': None,
         'current_chunk': '',
         'previous_chunk': '',
-        'input_validation_chunks': input_validation_chunks,
         'last_profiles': None,
         'last_appearing_characters': None,
-        'database': CharacterDatabase(),
+        'book_id': book_id,
         'no_more_chunks': False,
         'is_arabic': False,
         'last_summary': '',
@@ -50,5 +46,3 @@ def create_initial_state():
         'text_classification': None,
         'empty_profile_validation': None
     }
-
-initial_state = create_initial_state()

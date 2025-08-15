@@ -8,7 +8,6 @@ from django.core.exceptions import PermissionDenied
 from django.conf import settings
 import os
 import mimetypes
-import logging
 
 from .models import Book
 from .serializers import (

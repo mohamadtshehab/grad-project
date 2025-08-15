@@ -243,10 +243,11 @@ class DatabaseSeeder:
             book_characters = list(book.characters.all())
             
             for chunk in book_chunks:
-                # Each chunk mentions 1-3 characters
-                mentioned_characters = random.choices(
+                # Each chunk mentions 1-3 characters (without duplicates)
+                num_mentions = random.randint(1, min(3, len(book_characters)))
+                mentioned_characters = random.sample(
                     book_characters, 
-                    k=random.randint(1, min(3, len(book_characters)))
+                    k=num_mentions
                 )
                 
                 for character in mentioned_characters:
