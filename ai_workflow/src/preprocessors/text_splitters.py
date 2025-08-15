@@ -7,6 +7,8 @@ from langchain.text_splitter import (
     SentenceTransformersTokenTextSplitter
 )
 from typing import List, Optional, Dict, Any
+import os
+import random
 
 
 class TextChunker:
@@ -134,3 +136,49 @@ class TextChunker:
         
         return arabic_splitter.split_text(text)
     
+    
+def get_validation_chunks(
+    file_path: str,
+    chunk_size: int = 20,
+    num_chunks_to_select: int = 10
+) -> str:
+    """
+    Processes a text file into randomly selected chunks for validation.
+
+    The chunking method depends on the target_node:
+    - 'classification': Chunks are based on a number of words (chunk_size).
+    - 'quality_assessment': Chunks are based on a number of lines (chunk_size).
+
+    Args:
+        file_path: Path to the text file.
+        chunk_size: Number of words or lines per chunk, depending on the target_node.
+        num_chunks_to_select: Number of random chunks to select.
+
+    Returns:
+        A formatted string of selected chunks for LLM processing.
+
+    Raises:
+        FileNotFoundError: If the file doesn't exist.
+    """
+    # Validate file path first to avoid redundant checks
+    if not file_path or not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    all_chunks: List[str] = []
+    with open(file_path, 'r', encoding='utf-8') as file:
+        # Split the entire text into words
+        content = file.read().split()
+        # Create word-based chunks using a list comprehension
+        all_chunks = [
+            " ".join(content[i : i + chunk_size])
+            for i in range(0, len(content), chunk_size)
+        ]
+
+    # Select random chunks, ensuring we don't request more than exist
+    num_to_sample = min(num_chunks_to_select, len(all_chunks))
+    selected_chunks = random.sample(all_chunks, k=num_to_sample)
+
+    # Format the selected chunks into a final string efficiently
+    return "".join(
+        f"Chunk {i+1}:\n{chunk}\n" for i, chunk in enumerate(selected_chunks)
+    )

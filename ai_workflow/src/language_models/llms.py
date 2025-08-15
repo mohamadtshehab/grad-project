@@ -4,7 +4,7 @@ from langchain_google_genai import (
     HarmCategory,
     
 )
-from ai_workflow.src.schemas.output_structures import NameQuerier, ProfileRefresher, Summary, BookNameExtractor, TextQualityAssessment, TextClassification, EmptyProfileValidation
+from ai_workflow.src.schemas.output_structures import *
 from ai_workflow.src.language_models.tools import character_role_tool
 from dotenv import load_dotenv
 
@@ -31,12 +31,12 @@ safety_settings = {
 profile_update_llm = ChatGoogleGenerativeAI(model=model, 
                                             temperature=0.0, 
                                             safety_settings=safety_settings,
-                                            ).bind_tools([character_role_tool]).with_structured_output(ProfileRefresher)
+                                            ).bind_tools([character_role_tool]).with_structured_output(CharacterList)
 
 name_query_llm = ChatGoogleGenerativeAI(model=model, 
                                         temperature=0.0,
                                         safety_settings=safety_settings,
-                                        ).with_structured_output(NameQuerier)
+                                        ).with_structured_output(NameList)
 
 summary_llm = ChatGoogleGenerativeAI(model=model,
                                      temperature=1.0, 
@@ -46,7 +46,7 @@ summary_llm = ChatGoogleGenerativeAI(model=model,
 book_name_extraction_llm = ChatGoogleGenerativeAI(model=model,
                                                   temperature=0.0,
                                                   safety_settings=safety_settings,
-                                                  ).with_structured_output(BookNameExtractor)
+                                                  ).with_structured_output(Book)
 
 text_quality_assessment_llm = ChatGoogleGenerativeAI(model=model,
                                                      temperature=0.0,
@@ -57,6 +57,7 @@ text_classification_llm = ChatGoogleGenerativeAI(model=model,
                                                 temperature=0.0,
                                                 safety_settings=safety_settings,
                                                 ).with_structured_output(TextClassification)
+
 empty_profile_validation_llm = ChatGoogleGenerativeAI(model=model,
                                                temperature=0.0,
                                                safety_settings=safety_settings,

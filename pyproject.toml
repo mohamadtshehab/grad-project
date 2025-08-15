@@ -43,4 +43,8 @@ dependencies = [
     "pandas>=2.3.1",
     "langdetect>=1.0.9",
     "ipython>=9.4.0",
+    "rapidfuzz>=3.13.0",
+    "faker>=37.5.3",
+    "djangorestframework-simplejwt>=5.5.1",
+    "daphne>=4.2.1",
 ]
