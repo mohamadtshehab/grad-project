@@ -5,21 +5,24 @@ from ai_workflow.src.schemas.states import State
 from ai_workflow.src.preprocessors.text_splitters import TextChunker
 from ai_workflow.src.preprocessors.text_cleaners import clean_arabic_text_comprehensive
 from ai_workflow.src.preprocessors.metadata_remover import remove_book_metadata
-from ai_workflow.src.databases.database import character_db
+from ai_workflow.src.databases.django_adapter import get_character_adapter
 from ai_workflow.src.schemas.output_structures import *
+from ai_workflow.src.preprocessors.epub.epub_extractor import extract_text_from_file
 import os 
+from ai_workflow.src.preprocessors.text_splitters import get_validation_chunks
 
 def language_checker(state : State):
     """
     Node that Checks the text from the file before cleaning.
     Uses the check_text function to make sure the input text is in Arabic.
+    Supports both EPUB and plain text files.
     """
     file_path = state['file_path']
     if not file_path or not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
     
-    with open(file_path, 'r', encoding='utf-8') as file:
-        raw_text = file.read()
+    # Extract text from file (handles EPUB and plain text)
+    raw_text = extract_text_from_file(file_path)
     detector = ArabicLanguageDetector()
     
     result = detector.check_text(raw_text)
@@ -32,14 +35,15 @@ def cleaner(state: State):
     """
     Node that cleans the text from the file before chunking.
     Uses the clean_text function to normalize and clean the input text.
+    Supports both EPUB and plain text files.
     """
     file_path = state['file_path']
     
     if not file_path or not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
     
-    with open(file_path, 'r', encoding='utf-8') as file:
-        raw_text = file.read()
+    # Extract text from file (handles EPUB and plain text)
+    raw_text = extract_text_from_file(file_path)
 
     # Clean the text using the clean_text function
     cleaned_text = clean_arabic_text_comprehensive(raw_text)
@@ -136,20 +140,24 @@ def second_name_querier(state: State):
 def profile_retriever_creator(state: State):
     """
     Node that creates a new profile or retrieves an existing one.
-    Uses last_appearing_characters to retrieve profiles from character_db. If no character exists,
-    creates a new entry with that name, keeping other profile data null.    
+    Uses last_appearing_characters to retrieve profiles from Django Character models.
+    If no character exists, creates a new entry with that name, keeping other profile data null.    
     """
     last_appearing_characters = state['last_appearing_characters']
+    book_id = state.get('book_id')
+    
+    # Get the Django character adapter with book context
+    character_adapter = get_character_adapter(book_id)
     
     characters = []
     
-    for character in last_appearing_characters:
-        name = character.profile.name
+    for character_name in last_appearing_characters:
         
-        existing_characters = character_db.find_characters_by_name(name)
+        name = character_name if isinstance(character_name, str) else str(character_name)
+        
+        existing_characters = character_adapter.find_characters_by_name(name)
         
         if existing_characters:
-            # Convert database results to Character objects
             for char in existing_characters:
                 characters.append(Character(
                     id=char['id'],
@@ -157,11 +165,12 @@ def profile_retriever_creator(state: State):
                 ))
             
         else:
-            # Create a new profile and insert into database
             new_profile = Profile(name=name)
             
+            profile_dict = new_profile.model_dump()
+            
             # Insert character and get the generated ID
-            character_id = character_db.insert_character(new_profile.dict())
+            character_id = character_adapter.insert_character(profile_dict)
             
             # Create Character object with the new profile
             characters.append(Character(
@@ -183,14 +192,21 @@ def profile_refresher(state: State):
     chain = profile_update_prompt | profile_update_llm
     response = chain.invoke(chain_input)
     
+    # Get the Django character adapter with book context
+    book_id = state.get('book_id')
+    character_adapter = get_character_adapter(book_id)
+    
     # Update database with new profile data
     updated_characters = []
     for i, profile in enumerate(response.profiles):
         # Get the existing character ID
         existing_character = state['last_profiles'][i]
         
-        # Update the database
-        character_db.update_character(existing_character.id, profile.dict())
+        
+        profile_dict = profile.model_dump()
+        
+        # Update the database using Django adapter
+        character_adapter.update_character(existing_character.id, profile_dict)
         
         # Create updated Character object
         updated_characters.append(Character(
@@ -224,9 +240,12 @@ def summarizer(state: State):
     """
     third_of_length_of_last_summary = len(state['last_summary'])//3
     context = str(state['last_summary'][2 * third_of_length_of_last_summary:]) + " " + str(state['current_chunk'])
+    
+    character_names = state['last_appearing_characters']
+    
     chain_input = {
         "text": context,
-        "names": str([char.profile.name for char in state['last_appearing_characters']])
+        "names": str(character_names)
     }
     chain = summary_prompt | summary_llm
     response = chain.invoke(chain_input)
@@ -238,8 +257,7 @@ def text_quality_assessor(state):
     """
     Node that assesses the quality of Arabic text using Gemini AI.
     """
-    # Use pre-generated validation chunks from state
-    formatted_chunks = state.get('input_validation_chunks', '')
+    formatted_chunks = get_validation_chunks(state['file_path'],  chunk_size=30, num_chunks_to_select=5)
     
     chain_input = {
         "text": formatted_chunks
@@ -265,8 +283,7 @@ def text_classifier(state: State):
     """
     Node that classifies the input text as literary or non-literary using Gemini AI.
     """
-    # Use pre-generated validation chunks from state
-    formatted_chunks = state.get('input_validation_chunks', '')
+    formatted_chunks = get_validation_chunks(state['file_path'], chunk_size=30, num_chunks_to_select=5)
     
     chain_input = {
         "text": formatted_chunks
@@ -311,14 +328,22 @@ def empty_profile_validator(state: State):
         validation_score=response.validation_score
     )
     
+    # Get the Django character adapter with book context
+    book_id = state.get('book_id')
+    character_adapter = get_character_adapter(book_id)
+    
     # Update database and create updated Character objects
     updated_characters = []
     for i, profile in enumerate(response.profiles):
         # Get the existing character ID
         existing_character = state['last_profiles'][i]
         
-        # Update the database
-        character_db.update_character(existing_character.id, profile.dict())
+        
+        profile_dict = profile.model_dump()
+        
+        
+        # Update the database using Django adapter
+        character_adapter.update_character(existing_character.id, profile_dict)
         
         # Create updated Character object
         updated_characters.append(Character(

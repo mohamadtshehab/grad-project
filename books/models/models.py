@@ -20,8 +20,8 @@ def validate_book_file(value):
 
 
 def book_upload_path(instance, filename):
-    """Generate upload path for book files"""
-    return f'books/user_{instance.user_id.id}/{filename}'
+    """Generate upload path for book files using book_id"""
+    return f'books/book_{instance.book_id}/{filename}'
 
 
 class Book(models.Model):
@@ -98,3 +98,26 @@ class Book(models.Model):
     def file_extension(self):
         """Get file extension"""
         return os.path.splitext(self.file.name)[1].lower() if self.file else None
+    
+    @classmethod
+    def get_file_path_by_id(cls, book_id: str) -> str:
+        """
+        Get the file path for a book by its ID.
+        
+        Args:
+            book_id: The UUID of the book
+            
+        Returns:
+            The full file path to the book file
+            
+        Raises:
+            Book.DoesNotExist: If book not found
+            ValueError: If book has no file
+        """
+        try:
+            book = cls.objects.get(book_id=book_id)
+            if not book.file:
+                raise ValueError(f"Book {book_id} has no file attached")
+            return book.file.path
+        except cls.DoesNotExist:
+            raise cls.DoesNotExist(f"Book with ID {book_id} not found")

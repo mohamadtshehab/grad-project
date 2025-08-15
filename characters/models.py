@@ -3,8 +3,14 @@ from django.core.exceptions import ValidationError
 from books.models import Book
 from chunks.models import Chunk
 import uuid
+import json
 
-
+class UnicodeJSONEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        # ensure_ascii=False keeps Unicode characters as-is (not escaped)
+        kwargs['ensure_ascii'] = False
+        super().__init__(*args, **kwargs)
+        
 class Character(models.Model):
     """
     Model for storing character profiles extracted by AI workflow
@@ -13,7 +19,8 @@ class Character(models.Model):
     
     # Character data stored as JSON for flexibility
     character_data = models.JSONField(
-        help_text="Character profile data including name, age, role, physical_characteristics, personality, events, relationships, aliases"
+        help_text="Character profile data including name, age, role, physical_characteristics, personality, events, relationships, aliases",
+        encoder=UnicodeJSONEncoder
     )
     
     # Foreign key to Book
