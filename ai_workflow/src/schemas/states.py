@@ -46,5 +46,7 @@ def create_initial_state(book_id: str, file_path: str):
         'last_summary': '',
         'text_quality_assessment': None,
         'text_classification': None,
-        'empty_profile_validation': None
+        'empty_profile_validation': None,
+        'chunk_num': 0,
+        'num_of_chunks': 0
     }
