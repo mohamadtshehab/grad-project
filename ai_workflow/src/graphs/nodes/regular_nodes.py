@@ -7,6 +7,8 @@ from ai_workflow.src.preprocessors.text_cleaners import clean_arabic_text_compre
 from ai_workflow.src.preprocessors.metadata_remover import remove_book_metadata
 from ai_workflow.src.databases.database import character_db
 from ai_workflow.src.schemas.data_classes import Profile, TextQualityAssessment, TextClassification, EmptyProfileValidation
+from ai_workflow.src.language_models.tools import CharacterRoleTool
+from dataclasses import asdict
 import os
 import random
 
@@ -78,7 +80,7 @@ def chunker(state: State):
     if not content_text:
         raise ValueError("No content text available in state")
         
-    chunker = TextChunker(chunk_size=5000, chunk_overlap=200)
+    chunker = TextChunker(chunk_size=5000, chunk_overlap=100)
     
     chunks = chunker.chunk_text_arabic_optimized(content_text)
 
@@ -90,9 +92,9 @@ def chunker(state: State):
     gen = chunk_generator()
         
     return {
-        'chunk_generator': gen,
-    }
-    
+    'chunk_generator': gen,
+    'num_of_chunks': len(chunks)
+}
     
 def first_name_querier(state: State):
     """
@@ -165,7 +167,7 @@ def profile_retriever_creator(state: State):
                     physical_characteristics=profile_data['physical_characteristics'],
                     personality=profile_data['personality'],
                     events=profile_data['events'],
-                    relationships=profile_data['relationships'],
+                    relations=profile_data['relations'],
                     aliases=profile_data['aliases'],
                     id=char['id']
                 )
@@ -180,7 +182,7 @@ def profile_retriever_creator(state: State):
                 'physical_characteristics': [],
                 'personality': '',
                 'events': [],
-                'relationships': [],
+                'relations': [],
                 'aliases': [],
             }
             
@@ -196,7 +198,7 @@ def profile_retriever_creator(state: State):
                 physical_characteristics=[],
                 personality='',
                 events=[],
-                relationships=[],
+                relations=[],
                 aliases=[],
                 id=character_id,  # Use the generated ID from database
             )
@@ -228,7 +230,7 @@ def profile_retriever_creator(state: State):
 #             physical_characteristics=profile_data.physical_characteristics,
 #             personality=profile_data.personality,
 #             events=profile_data.events,
-#             relationships=profile_data.relations,
+#             relations=profile_data.relations,
 #             aliases=profile_data.aliases,
 #             id=profile_data.id
 #         )
@@ -243,7 +245,7 @@ def profile_retriever_creator(state: State):
 #             'physical_characteristics': profile_data.physical_characteristics,
 #             'personality': profile_data.personality,
 #             'events': profile_data.events,
-#             'relationships': profile_data.relations,
+#             'relations': profile_data.relations,
 #             'aliases': profile_data.aliases,
 #         }
     
@@ -260,91 +262,112 @@ def profile_retriever_creator(state: State):
 
 def profile_refresher(state: State):
     """
-    Node that refreshes the profiles based on the current chunk.
-    Only merges updates returned by the LLM with existing profiles.
+    Refreshes profiles based on the current chunk.
+    Merges updates returned by the LLM with existing profiles.
+    Ensures no None/null values in output.
+    Relations are merged intelligently: last relation for each character is kept.
     """
+
+    def safe_str(value):
+        if value is None or (isinstance(value, str) and value.strip().lower() in ["none", "null"]):
+            return ""
+        return value.strip() if isinstance(value, str) else str(value)
+
+    def safe_list(value):
+        if value is None:
+            return []
+        return value if isinstance(value, list) else []
+
+    def merge_list(old_list, new_list):
+        old_list = safe_list(old_list)
+        new_list = safe_list(new_list)
+        return list(set(old_list + new_list)) if new_list else old_list
+
+    def merge_relations(old_list, new_list):
+        old_list = safe_list(old_list)
+        new_list = safe_list(new_list)
+        merged_dict = {}
+
+        for rel in old_list:
+            if ':' in rel:
+                name, relation = map(str.strip, rel.split(':', 1))
+                merged_dict[name] = relation
+
+        for rel in new_list:
+            if ':' in rel:
+                name, relation = map(str.strip, rel.split(':', 1))
+                merged_dict[name] = relation  
+
+        return [f"{name}: {relation}" for name, relation in merged_dict.items()]
+
+    character_role_tool = CharacterRoleTool()
     chain_input = {
         "text": str(state['last_summary']),
         "profiles": str(state['last_profiles'])
     }
+
     chain = profile_update_prompt | profile_update_llm
     response = chain.invoke(chain_input)
-    print("=== LLM Raw Output ===")
-    for p in response.profiles:
-       print(f"ID: {p.id}")
-       print(f"Name: {p.name}")
-       print(f"Hint: {p.hint}")
-       print(f"Age: {p.age}")
-       print(f"Role: {p.role}")
-       print(f"Physical: {p.physical_characteristics}")
-       print(f"Personality: {p.personality}")
-       print(f"Events: {p.events}")
-       print(f"Relations: {p.relations}")
-       print(f"Aliases: {p.aliases}")
-       print("-----------------------------")
-  
-    updated_profiles = []
 
-   
+    updated_profiles = []
     old_by_id = {p.id: p for p in state['last_profiles']}
 
     for new_profile_data in response.profiles:
         old_profile = old_by_id.get(new_profile_data.id)
-        if not old_profile:
-            continue  
 
-        name = new_profile_data.name or old_profile.name
-        hint = new_profile_data.hint or old_profile.hint
-        age = new_profile_data.age or old_profile.age
-        role = new_profile_data.role or old_profile.role
+        if old_profile:
+            name = safe_str(new_profile_data.name or old_profile.name)
+            hint = safe_str(new_profile_data.hint or old_profile.hint)
+            age = safe_str(new_profile_data.age or old_profile.age)
+            role = safe_str(new_profile_data.role) or safe_str(old_profile.role)
 
-        def merge_list(old_list, new_list):
-            if not new_list:
-                return old_list
-            return list(set(old_list + new_list))
+            events = merge_list(old_profile.events, new_profile_data.events)
+            relations = merge_relations(old_profile.relations, new_profile_data.relations)
+            aliases = merge_list(old_profile.aliases, new_profile_data.aliases)
+            physical_characteristics = merge_list(old_profile.physical_characteristics, new_profile_data.physical_characteristics)
+            personality = merge_list(old_profile.personality, new_profile_data.personality)
 
-        events = merge_list(old_profile.events, new_profile_data.events)
-        relationships = merge_list(old_profile.relationships, new_profile_data.relations)
-        aliases = merge_list(old_profile.aliases, new_profile_data.aliases)
-        physical_characteristics = merge_list(old_profile.physical_characteristics, new_profile_data.physical_characteristics)
-        personality = merge_list(old_profile.personality if isinstance(old_profile.personality, list) else [old_profile.personality],
-                                 new_profile_data.personality if isinstance(new_profile_data.personality, list) else [new_profile_data.personality])
+            merged_profile = Profile(
+                id=safe_str(old_profile.id),
+                name=name,
+                hint=hint,
+                age=age,
+                role=role,
+                events=events,
+                relations=relations,
+                aliases=aliases,
+                physical_characteristics=physical_characteristics,
+                personality=personality
+            )
+        else:
+            role_value = safe_str(new_profile_data.role)
+            if not role_value:
+                role_value = safe_str(character_role_tool.run({
+                    "character_description": new_profile_data.hint or "",
+                    "personality": ", ".join(safe_list(new_profile_data.personality)),
+                    "events": ", ".join(safe_list(new_profile_data.events)),
+                    "relationships": ", ".join(safe_list(new_profile_data.relations))
+                }))
 
-        merged_profile = Profile(
-            id=old_profile.id,
-            name=name,
-            hint=hint,
-            age=age,
-            role=role,
-            events=events,
-            relationships=relationships,
-            aliases=aliases,
-            physical_characteristics=physical_characteristics,
-            personality=personality if len(personality) > 1 else personality[0]
-        )
+            merged_profile = Profile(
+                id=safe_str(new_profile_data.id),
+                name=safe_str(new_profile_data.name),
+                hint=safe_str(new_profile_data.hint),
+                age=safe_str(new_profile_data.age),
+                role=role_value,
+                events=safe_list(new_profile_data.events),
+                relations=safe_list(new_profile_data.relations),
+                aliases=safe_list(new_profile_data.aliases),
+                physical_characteristics=safe_list(new_profile_data.physical_characteristics),
+                personality=safe_list(new_profile_data.personality)
+            )
 
         updated_profiles.append(merged_profile)
-
-        updated_profile_dict = {
-            'name': merged_profile.name,
-            'hint': merged_profile.hint,
-            'age': merged_profile.age,
-            'role': merged_profile.role,
-            'events': merged_profile.events,
-            'relationships': merged_profile.relationships,
-            'aliases': merged_profile.aliases,
-            'physical_characteristics': merged_profile.physical_characteristics,
-            'personality': merged_profile.personality,
-        }
-
+        updated_profile_dict = asdict(merged_profile)
         if merged_profile.id:
             character_db.update_character(merged_profile.id, updated_profile_dict)
 
-    return {
-        'last_profiles': updated_profiles
-    }
-
-
+    return {'last_profiles': updated_profiles}
 
 def chunk_updater(state: State):
     """
@@ -352,12 +375,12 @@ def chunk_updater(state: State):
     """
     try:
         current_chunk = next(state['chunk_generator'])
-        #chunk_num = state.get('chunk_num', 0) + 1
+        chunk_num = state.get('chunk_num', 0) + 1
         
         return {
             'previous_chunk': state.get('current_chunk', ''),
             'current_chunk': current_chunk,
-             #'chunk_num': chunk_num,
+            'chunk_num': chunk_num,
             'no_more_chunks': False
         }
     except StopIteration:
@@ -369,17 +392,20 @@ def summarizer(state: State):
     """
     Node that summarizes the text based on the profiles.
     """
-    third_of_length_of_last_summary = len(state['last_summary'])//3
+    third_of_length_of_last_summary = len(state['last_summary']) // 3
     context = str(state['last_summary'][2 * third_of_length_of_last_summary:]) + " " + str(state['current_chunk'])
     chain_input = {
         "text": context,
         "names": str(state['last_appearing_characters'])
     }
     chain = summary_prompt | summary_llm
-    response = chain.invoke(chain_input)
-    
-    return {'last_summary': response.summary}
 
+    response = chain.invoke(chain_input)
+
+    if not response or not hasattr(response, "summary") or response.summary is None:
+        response = chain.invoke(chain_input)
+
+    return {"last_summary": response.summary}
 
 def text_quality_assessor(state):
     """
@@ -526,7 +552,7 @@ def empty_profile_validator(state: State):
         profiles_text += f"الصفات الجسدية: {', '.join(profile.physical_characteristics)}\n"
         profiles_text += f"الشخصية: {profile.personality}\n"
         profiles_text += f"الأحداث: {', '.join(profile.events)}\n"
-        profiles_text += f"العلاقات: {', '.join(profile.relationships)}\n"
+        profiles_text += f"العلاقات: {', '.join(profile.relations)}\n"
         profiles_text += f"الأسماء البديلة: {', '.join(profile.aliases)}\n"
         profiles_text += "---\n"
     
@@ -555,7 +581,7 @@ def empty_profile_validator(state: State):
             physical_characteristics=profile_data.physical_characteristics,
             personality=profile_data.personality,
             events=profile_data.events,
-            relationships=profile_data.relations,
+            relations=profile_data.relations,
             aliases=profile_data.aliases,
             id=profile_data.id
         )
@@ -570,7 +596,7 @@ def empty_profile_validator(state: State):
             'physical_characteristics': profile_data.physical_characteristics,
             'personality': profile_data.personality,
             'events': profile_data.events,
-            'relationships': profile_data.relations,
+            'relations': profile_data.relations,
             'aliases': profile_data.aliases,
         }
     

@@ -19,7 +19,8 @@ class State(TypedDict):
     text_quality_assessment: TextQualityAssessment | None
     text_classification: TextClassification | None
     empty_profile_validation: EmptyProfileValidation | None
-    #chunk_num:int
+    chunk_num:int
+    num_of_chunks:int
 
 initial_state = {
     'file_path': 'ai_workflow/resources/texts/اللص والكلاب.txt',
@@ -36,5 +37,6 @@ initial_state = {
     'text_quality_assessment': None,
     'text_classification': None,
     'empty_profile_validation': None,
-    #'chunk_num':0
+    'chunk_num':0,
+    'num_of_chunks':''
 }
