@@ -1,18 +1,18 @@
-from dataclasses import dataclass
-
+from dataclasses import dataclass ,field
+from typing import List, Optional
 
 @dataclass
 class Profile:
-    name: str
-    hint: str
-    age: str
-    role: str
-    physical_characteristics: list[str]
-    personality: str
-    events: list[str]
-    relationships: list[str]
-    aliases: list[str]
     id: str
+    name: str
+    hint: Optional[str] = None
+    age: Optional[str] = None
+    role: Optional[str] = None
+    physical_characteristics: List[str] = field(default_factory=list)
+    personality: List[str] = field(default_factory=list)
+    events: List[str] = field(default_factory=list)
+    relations: List[str] = field(default_factory=list)
+    aliases: List[str] = field(default_factory=list)
     
 @dataclass
 class LastAppearingCharacter:

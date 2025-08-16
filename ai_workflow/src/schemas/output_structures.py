@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
+from typing import List, Optional
 
 class Character(BaseModel):
     """Single character with name and hint."""
@@ -11,51 +12,43 @@ class NameQuerier(BaseModel):
     characters: list[Character] = Field(description="قائمة بالشخصيات الموجودة في النص")
     
 class ProfileData(BaseModel):
-    """Single profile data for a character."""
+    """Single profile data for a character, partial updates allowed."""
     
-    name: str = Field(
-        description="اسم الشخصية كما هو مذكور في البروفايل المعطى؛ لا يتم تغييره"
+    id: str = Field(description="معرف فريد للشخصية؛ لا يتغير خلال التحديث")
+    name: str = Field(description="اسم الشخصية كما هو مذكور في البروفايل المعطى؛ لا يتم تغييره")
+    
+    hint: Optional[str] = Field(
+        default=None,
+        description="تلميح مميز يحدد الشخصية إذا تغير أو أضيف، اتركه None إذا لم يرد جديد"
+    )
+    age: Optional[str] = Field(
+        default=None,
+        description="العمر التقديري أو الوصف الدال عليه إذا تغير أو أضيف، اتركه None إذا لم يرد جديد"
+    )
+    role: Optional[str] = Field(
+        default=None,
+        description="الدور الجديد فقط إذا تغير. استخدم أداة character_role_classifier للتحقق من التغيير قبل الدمج"
     )
     
-    hint: str = Field(
-        description="تلميح مميز يحدد الشخصية ويساعد على تمييزها، يؤخذ من البروفايل المعطى"
+    physical_characteristics: Optional[List[str]] = Field(
+        default_factory=list,
+        description="الصفات الجسدية الجديدة فقط. اترك القائمة فارغة [] إذا لا يوجد جديد"
     )
-    
-    age: str = Field(
-        description="العمر التقديري أو الوصف الدال عليه إن وُجد في النص؛ إذا لم يكن واضحًا، تبقى القيمة كما هي"
+    personality: Optional[List[str]] = Field(
+        default_factory=list,
+        description="الصفات النفسية الجديدة فقط. اترك القائمة فارغة [] إذا لا يوجد جديد"
     )
-    
-    role: str = Field(
-        description="الدور الذي تلعبه الشخصية في النص؛ التزم باختيار اقرب دور مناسب للشخصية من المصطلحات العربية الموجودة في ملف  CSV المرفق حصرا 'character_terms_arabic.csv'"
+    events: Optional[List[str]] = Field(
+        default_factory=list,
+        description="الأحداث الجديدة فقط، إذا لم يوجد جديد اترك القائمة فارغة []"
     )
-
-    physical_characteristics: List[str] = Field(
-        description="الصفات الجسدية التي وُصفت بها الشخصية بشكل صريح أو ضمني ، بصيغة قائمة من النصوص"
+    relations: Optional[List[str]] = Field(
+        default_factory=list,
+        description='العلاقات الجديدة فقط مع الشخصيات الأخرى بصيغة "اسم_الشخصية: نوع_العلاقة". اترك القائمة [] إذا لا يوجد جديد'
     )
-    
-    personality: str = Field(
-        description="الصفات النفسية أو السلوكية التي ظهرت في النص المرفق الحالي بوضوح أو تلميح من دون ايراد ما تم استنتاجه سابقا وفي حال عدم ظهورها ارجع []"
-        
-
-
-    )
-    
-    events: List[str] = Field(
-        description=" قم بارجاع قائمة بالأحداث المحورية والمهمة التي أثّرت على تطور الشخصية أو القصة من ما تم استنتاجه من المقطع الحالي من دون اعادة ارسال ما سبق؛ يتم تجاهل الأحداث التفصيلية أو العادية وفي حال عدم استنتاج احداث جديدة ارجع []"
-    )
-    
-    relations: List[str] = Field(
-        description="قائمة بالعلاقات مع الشخصيات الأخرى بصيغة 'اسم_الشخصية: نوع_العلاقة' مثل 'سليم: صداقة' بحيث تكون قائمة من العلاقات التي تم استنتاجها من المقطع الحالي وفي حال عدم استنتاج احداث جديدة ارجع []"
-    
-    )
-    
-    aliases: List[str] = Field(
-        description=  "قائمة بالأسماء أو الألقاب الأخرى التي يُشار بها إلى الشخصية في النص والتي تم استنتاجها من المقطع الحالي ولا تعيد ارسال ما تم استنتاجه سابقا وفي حال عدم استنتاج احداث جديدة ارجع []"
-    
-    )
-    
-    id: str = Field(
-        description="معرف فريد للشخصية؛ لا يتغير خلال التحديث"
+    aliases: Optional[List[str]] = Field(
+        default_factory=list,
+        description="الأسماء أو الألقاب الجديدة فقط. اترك القائمة [] إذا لا يوجد جديد"
     )
 
 
