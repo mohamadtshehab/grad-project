@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
+from typing import List, Optional
 
 class NameList(BaseModel):
     """Use this schema to format the character list output."""

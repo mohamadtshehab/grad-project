@@ -19,7 +19,8 @@ class State(TypedDict):
     text_quality_assessment: TextQualityAssessment | None
     text_classification: TextClassification | None
     empty_profile_validation: EmptyProfileValidation | None
-    #chunk_num:int
+    chunk_num:int
+    num_of_chunks:int
 
 def create_initial_state(book_id: str, file_path: str):
     """
