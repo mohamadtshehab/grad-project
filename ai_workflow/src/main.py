@@ -12,7 +12,7 @@ from ai_workflow.src.configs import GRAPH_CONFIG
 from ai_workflow.src.graphs.graph_visualizers import visualize_graph
 from books.models import Book
 from ai_workflow.src.databases.django_adapter import get_character_adapter
-from ai_workflow.src.extractors.epub_to_txt_converter import EPUBProcessor
+from ai_workflow.src.preprocessors.epub.epub_to_txt_converter import EPUBProcessor
 import argparse
 from dotenv import load_dotenv
 load_dotenv()

@@ -9,11 +9,7 @@ class NameList(BaseModel):
 class Profile(BaseModel):
     
     name: str = Field(description="اسم الشخصية كما هو مذكور في البروفايل المعطى؛ لا يتم تغييره")
-    
-    hint: Optional[str] = Field(
-        default=None,
-        description="تلميح مميز يحدد الشخصية إذا تغير أو أضيف، اتركه None إذا لم يرد جديد"
-    )
+
     age: Optional[str] = Field(
         default=None,
         description="العمر التقديري أو الوصف الدال عليه إذا تغير أو أضيف، اتركه None إذا لم يرد جديد"
