@@ -29,24 +29,21 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
-    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_filters',
     'channels',
-    'chunked_upload',
     'debug_toolbar',
     'drf_yasg',
 ]
 
 LOCAL_APPS = [
-    'authentication',
-    'myadmin',
-    'customer',
+    'utils',
+    'user',
     'books',
-    'store',
-    'chunked_uploads',
     'chunks',
-    'profiles',
+    'characters',
+    'authentication',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -121,10 +118,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# File upload settings
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
+FILE_UPLOAD_PERMISSIONS = 0o644
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Using default Django User model
+# Custom User model
+AUTH_USER_MODEL = 'user.User'
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -144,13 +147,31 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',      # 100 requests per hour for anonymous users
+        'user': '1000/hour',     # 1000 requests per hour for authenticated users
+        'password_reset': '5/hour',  # 5 password reset requests per hour per IP
+    },
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FileUploadParser',
+    ],
 }
 
 # JWT settings
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),  # Extended from 15 minutes to 24 hours
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   # Extended from 1 day to 7 days
     'AUTH_HEADER_TYPES': ('Bearer',),
+    'ROTATE_REFRESH_TOKENS': True,                 # Generate new refresh token on each use
+    'BLACKLIST_AFTER_ROTATION': True,              # Blacklist old refresh tokens
+    'UPDATE_LAST_LOGIN': True,                      # Update last login timestamp
 }
 
 # Channel layers configuration
@@ -171,7 +192,16 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Dubai'
 
-# Email settings removed
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_HOST_USER = '38908623c513e5'
+EMAIL_HOST_PASSWORD = '15bb8fb183c683'
+EMAIL_PORT = '2525'
+DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+
+# For development/testing, you can use console backend instead
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Chunked upload settings
 CHUNKED_UPLOAD_ABSTRACT_MODEL = False
@@ -182,6 +212,10 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+
+
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True 
+
+APPEND_SLASH = True

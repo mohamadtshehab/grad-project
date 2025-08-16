@@ -17,7 +17,7 @@ graph.add_node('metadata_remover', metadata_remover)
 graph.add_node('text_quality_assessor', text_quality_assessor)
 graph.add_node('text_classifier', text_classifier)
 
-graph.add_node('empty_profile_validator', empty_profile_validator)
+# graph.add_node('empty_profile_validator', empty_profile_validator)
 
 
 graph.set_entry_point('language_checker')
@@ -25,14 +25,14 @@ graph.add_edge('cleaner', 'metadata_remover')
 graph.add_edge('metadata_remover', 'chunker')
 graph.add_edge('chunker', 'chunk_updater')
 
-graph.add_conditional_edges(
-    'empty_profile_validator',
-    router_from_empty_profile_validator_to_chunk_updater_or_end,
-    {
-        'chunk_updater': 'chunk_updater',
-        'END': END
-    }
-)
+# graph.add_conditional_edges(
+#     'empty_profile_validator',
+#     router_from_empty_profile_validator_to_chunk_updater_or_end,
+#     {
+#         'chunk_updater': 'chunk_updater',
+#         'END': END
+#     }
+# )
 
 graph.add_conditional_edges('language_checker', router_from_language_checker_to_text_quality_assessor_or_end, {
     'text_quality_assessor': 'text_quality_assessor',
@@ -70,6 +70,6 @@ graph.add_edge('second_name_querier', 'profile_retriever_creator')
 
 graph.add_edge('profile_retriever_creator', 'profile_refresher')
 
-graph.add_edge('profile_refresher', 'empty_profile_validator')
+graph.add_edge('profile_refresher', 'chunk_updater')
 
 compiled_graph = graph.compile()
