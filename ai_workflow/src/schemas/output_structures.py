@@ -3,7 +3,7 @@ from typing import List
 
 class NameList(BaseModel):
     """Use this schema to format the character list output."""
-    characters: List[str] = Field(description="قائمة بالشخصيات الموجودة في النص")
+    names: List[str] = Field(description="قائمة باسماء الشخصيات الموجودة في النص")
 
 class Profile(BaseModel):
     """Single profile data for a character."""

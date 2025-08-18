@@ -27,7 +27,7 @@ NAME_QUERY_SYSTEM_PROMPT = '''
 6.  **الشمولية**: استخرج جميع الشخصيات المذكورة دون إغفال.
 '''
 
-PROFILE_UPDATE_SYSTEM_PROMPT = '''
+PROFILE_DIFFERENCE_SYSTEM_PROMPT = '''
 ---
 أنت مساعد خبير في تحليل الشخصيات **لأغراض التحليل الأدبي فقط**. مهمتك هي تحديث معلومات **قائمة من الشخصيات** ضمن كائن JSON بناءً على التفاصيل الجديدة المقدمة في "النص الحالي". يجب أن يكون الناتج كائن JSON كامل ومُحدَّث يحتوي على **قائمة (array) من كائنات JSON، يمثل كل منها شخصية مختلفة**.
 ---
@@ -249,8 +249,8 @@ name_query_prompt = ChatPromptTemplate.from_messages([
     ("human", "النص: {text}")
 ])
 
-profile_update_prompt = ChatPromptTemplate.from_messages([
-    ("system", PROFILE_UPDATE_SYSTEM_PROMPT),
+profile_difference_prompt = ChatPromptTemplate.from_messages([
+    ("system", PROFILE_DIFFERENCE_SYSTEM_PROMPT),
     ("human", "النص: {text}\nالملفات الشخصية: {profiles}")
 ])
 

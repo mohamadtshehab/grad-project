@@ -16,7 +16,7 @@ class TextChunker:
     A utility class for chunking text using various LangChain text splitters.
     """
     
-    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
+    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200, file_path: str = None):
         """
         Initialize the text chunker with default parameters.
         
@@ -26,7 +26,7 @@ class TextChunker:
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        
+        self.file_path = file_path
         # Initialize the default recursive splitter
         self.recursive_splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
@@ -104,7 +104,7 @@ class TextChunker:
         )
         return splitter.split_text(text)
     
-    def chunk_text_arabic_optimized(self, text: str) -> List[str]:
+    def chunk_text_arabic_optimized(self) -> List[str]:
         """
         Split Arabic text with optimizations for Arabic language characteristics.
         
@@ -134,7 +134,7 @@ class TextChunker:
             separators=arabic_separators
         )
         
-        return arabic_splitter.split_text(text)
+        return arabic_splitter.split_text(self.file_path)
     
     
 def get_validation_chunks(
