@@ -134,7 +134,17 @@ POST /api/auth/register/
 | `password` | string | Yes | Password (minimum 6 characters) |
 | `password_confirm` | string | Yes | Password confirmation |
 
+### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 201 | User registered successfully |
+| 400 | Bad Request - Validation errors (email already exists, password mismatch, invalid email format) |
+| 500 | Internal Server Error |
+
 ### Response
+
+**Success Response (201)**
 ```json
 {
   "status": "success",
@@ -146,6 +156,18 @@ POST /api/auth/register/
     "email": "john@example.com",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**Error Response (400)**
+```json
+{
+  "status": "error",
+  "en": "Email already exists",
+  "ar": "البريد الإلكتروني موجود بالفعل",
+  "error": {
+    "email": ["User with this email already exists."]
   }
 }
 ```
@@ -181,7 +203,18 @@ POST /api/auth/login/
 | `email` | string | Yes | User's email address |
 | `password` | string | Yes | User's password |
 
+### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Login successful |
+| 400 | Bad Request - Missing fields or validation errors |
+| 401 | Unauthorized - Invalid credentials |
+| 500 | Internal Server Error |
+
 ### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
@@ -191,6 +224,16 @@ POST /api/auth/login/
     "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
     "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
   }
+}
+```
+
+**Error Response (401)**
+```json
+{
+  "status": "error",
+  "en": "Invalid email or password",
+  "ar": "بريد إلكتروني أو كلمة مرور غير صحيحة",
+  "error": "Invalid credentials"
 }
 ```
 
@@ -219,10 +262,31 @@ POST /api/auth/refresh/
 }
 ```
 
+### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Token refreshed successfully |
+| 400 | Bad Request - Missing or invalid refresh token |
+| 401 | Unauthorized - Invalid or expired refresh token |
+| 500 | Internal Server Error |
+
 ### Response
+
+**Success Response (200)**
 ```json
 {
   "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+**Error Response (401)**
+```json
+{
+  "status": "error",
+  "en": "Token is invalid or expired",
+  "ar": "الرمز المميز غير صحيح أو منتهي الصلاحية",
+  "error": "Token is blacklisted"
 }
 ```
 
@@ -247,12 +311,33 @@ Required: Bearer Token
 }
 ```
 
+### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Logged out successfully |
+| 400 | Bad Request - Missing refresh token |
+| 401 | Unauthorized - Invalid access token or refresh token |
+| 500 | Internal Server Error |
+
 ### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
   "en": "Logged out successfully",
   "ar": "تم تسجيل الخروج بنجاح"
+}
+```
+
+**Error Response (401)**
+```json
+{
+  "status": "error",
+  "en": "Authentication credentials were not provided",
+  "ar": "لم يتم توفير بيانات الاعتماد للمصادقة",
+  "error": "Authentication required"
 }
 ```
 
@@ -272,7 +357,17 @@ GET /api/auth/profile/
 #### Authentication
 Required: Bearer Token
 
+#### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Profile retrieved successfully |
+| 401 | Unauthorized - Invalid or missing access token |
+| 500 | Internal Server Error |
+
 #### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
@@ -315,7 +410,18 @@ Required: Bearer Token
 | `name` | string | No | User's full name |
 | `email` | string | No | User's email address |
 
+#### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Profile updated successfully |
+| 400 | Bad Request - Validation errors (invalid email format, email already exists) |
+| 401 | Unauthorized - Invalid or missing access token |
+| 500 | Internal Server Error |
+
 #### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
@@ -327,6 +433,18 @@ Required: Bearer Token
     "email": "johnsmith@example.com",
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T11:45:00Z"
+  }
+}
+```
+
+**Error Response (400)**
+```json
+{
+  "status": "error",
+  "en": "Email already exists",
+  "ar": "البريد الإلكتروني موجود بالفعل",
+  "error": {
+    "email": ["User with this email already exists."]
   }
 }
 ```
@@ -364,12 +482,33 @@ Required: Bearer Token
 | `new_password` | string | Yes | New password (minimum 6 characters) |
 | `new_password_confirm` | string | Yes | New password confirmation |
 
+#### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Password changed successfully |
+| 400 | Bad Request - Validation errors (password mismatch, weak password) |
+| 401 | Unauthorized - Invalid access token or incorrect old password |
+| 500 | Internal Server Error |
+
 #### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
   "en": "Password changed successfully",
   "ar": "تم تغيير كلمة المرور بنجاح"
+}
+```
+
+**Error Response (401)**
+```json
+{
+  "status": "error",
+  "en": "Old password is incorrect",
+  "ar": "كلمة المرور القديمة غير صحيحة",
+  "error": "Invalid old password"
 }
 ```
 
@@ -392,7 +531,18 @@ POST /api/auth/password/reset/
 }
 ```
 
+#### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Reset code request processed successfully |
+| 400 | Bad Request - Missing or invalid email |
+| 429 | Too Many Requests - Rate limit exceeded (5 requests per hour) |
+| 500 | Internal Server Error |
+
 #### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
@@ -400,6 +550,16 @@ POST /api/auth/password/reset/
   "ar": "يتم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
   "message": "A 6-digit code is being sent to john@example.com",
   "task_id": "celery-task-id-here"
+}
+```
+
+**Error Response (429)**
+```json
+{
+  "status": "error",
+  "en": "Too many password reset requests. Please try again later",
+  "ar": "طلبات إعادة تعيين كلمة المرور كثيرة جداً. يرجى المحاولة مرة أخرى لاحقاً",
+  "error": "Rate limit exceeded"
 }
 ```
 
@@ -437,7 +597,18 @@ POST /api/auth/password/reset/confirm/
 | `new_password` | string | Yes | New password (minimum 6 characters) |
 | `new_password_confirm` | string | Yes | New password confirmation |
 
+#### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Password reset successful |
+| 400 | Bad Request - Validation errors (invalid code, password mismatch, weak password) |
+| 404 | Not Found - User with email does not exist |
+| 500 | Internal Server Error |
+
 #### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
@@ -496,12 +667,33 @@ Required: Bearer Token
 |-------|------|----------|-------------|
 | `password` | string | Yes | Current password for confirmation |
 
+#### Status Codes
+
+| Code | Description |
+|------|-------------|
+| 200 | Account deleted successfully |
+| 400 | Bad Request - Missing password or validation errors |
+| 401 | Unauthorized - Invalid access token or incorrect password |
+| 500 | Internal Server Error |
+
 #### Response
+
+**Success Response (200)**
 ```json
 {
   "status": "success",
   "en": "Account deleted successfully",
   "ar": "تم حذف الحساب بنجاح"
+}
+```
+
+**Error Response (401)**
+```json
+{
+  "status": "error",
+  "en": "Password is incorrect",
+  "ar": "كلمة المرور غير صحيحة",
+  "error": "Invalid password"
 }
 ```
 

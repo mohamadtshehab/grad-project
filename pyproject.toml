@@ -47,4 +47,5 @@ dependencies = [
     "faker>=37.5.3",
     "djangorestframework-simplejwt>=5.5.1",
     "daphne>=4.2.1",
+    "ebooklib>=0.19",
 ]

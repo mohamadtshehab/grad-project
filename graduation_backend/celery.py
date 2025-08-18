@@ -19,6 +19,9 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
+# Explicitly import task modules to ensure they're registered
+app.autodiscover_tasks(['books.tasks_workflow'])
+
 # Optional: Configure additional settings
 app.conf.update(
     task_serializer='json',
@@ -38,6 +41,7 @@ app.conf.task_routes = {
     'authentication.tasks.send_password_reset_email': {'queue': 'celery'},
     'authentication.tasks.send_welcome_email': {'queue': 'celery'},
     'books.tasks.extract_novel_name': {'queue': 'celery'},
+    'books.tasks_workflow.process_book_workflow': {'queue': 'celery'},
 }
 
 @app.task(bind=True)

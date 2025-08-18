@@ -1,4 +1,6 @@
-def remove_book_metadata(text: str) -> str:
+from ai_workflow.src.configs import METADATA_REMOVAL_CONFIG
+
+def remove_book_metadata(text: str, config: dict = METADATA_REMOVAL_CONFIG) -> str:
     """
     Remove book metadata from the beginning of Arabic text.
     
@@ -18,26 +20,15 @@ def remove_book_metadata(text: str) -> str:
         str: The text with metadata removed, or the original text if no metadata is detected
     """
     
-    # Step 1: Configuration
-    SEARCH_WINDOW_SIZE = 2000
-    MAX_METADATA_LINE_LENGTH = 80
-    METADATA_KEYWORDS = [
-        'نشر', 'ترجمة', 'شركة', 'صحافة', 'طباعة', 'توزيع', 'موافقة', 
-        'ناشر', 'غلاف', 'تأليف', 'مركز', 'دار', 'حقوق', 'محفوظة', 
-        'كاتب', 'أديب', 'مؤلف', 'رقم', 'تاريخ', 'رواية', 'كتاب', 
-        'نسخة', 'غلاف', 'قانون', 'شركة', 'مترجم', 'طبعة', 'تحرير', 
-        'محرر', 'إهداء', 'فاكس'
-    ]
-    START_KEYWORDS = ['فصل', 'أول', 'جزء']
     
     # Step 2: Isolate the Search Area and Split into Lines
-    search_window = text[:SEARCH_WINDOW_SIZE]
+    search_window = text[:config['search_window_size']]
     lines = search_window.split('\n')
     
     # Step 3: Find the First True Content Marker (PRIORITY)
     first_start_pos = -1
     
-    for keyword in START_KEYWORDS:
+    for keyword in config['start_keywords']:
         pos = search_window.find(keyword)
         if pos != -1:
             if first_start_pos == -1:
@@ -52,10 +43,10 @@ def remove_book_metadata(text: str) -> str:
         # Only check for metadata if no content markers were found
         for line in lines:
             # Check if this line contains a metadata keyword
-            for keyword in METADATA_KEYWORDS:
+            for keyword in config['metadata_keywords']:
                 if keyword in line:
                     # Check if the line is short enough to be considered metadata
-                    if len(line.strip()) <= MAX_METADATA_LINE_LENGTH:
+                    if len(line.strip()) <= config['max_metadata_line_length']:
                         # Find the position of this keyword in the original search_window
                         line_start_pos = search_window.find(line)
                         keyword_pos_in_line = line.find(keyword)

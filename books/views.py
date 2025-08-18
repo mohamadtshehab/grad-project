@@ -9,7 +9,7 @@ from django.conf import settings
 import os
 import mimetypes
 
-from .models import Book
+from .models import Book, epub_to_raw_html_string
 from .serializers import (
     BookListSerializer, BookDetailSerializer, 
     BookUploadSerializer, BookStatusSerializer
@@ -19,6 +19,7 @@ from django.utils import timezone
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.db import transaction
+from django.core.files.base import ContentFile
 
 
 
@@ -56,22 +57,37 @@ class BookViewSet(viewsets.ModelViewSet):
             )
             
             if serializer.is_valid():
+                
                 book = serializer.save()
                 
+                # Ensure a corresponding TXT file exists next to the EPUB
+                if getattr(book, 'file', None) and not getattr(book, 'txt_file', None):
+                    epub_path = book.file.path
+                    raw_html_content = epub_to_raw_html_string(epub_path)
+                    base_filename = os.path.basename(epub_path)
+                    txt_filename = os.path.splitext(base_filename)[0] + '.txt'
+                    # Save the generated TXT content to the model's txt_file field
+                    book.txt_file.save(
+                        txt_filename,
+                        ContentFile(raw_html_content.encode('utf-8')),
+                        save=False
+                    )
+                    book.save(update_fields=['txt_file'])
                 
-                # Create a Job for novel name extraction and enqueue task
+                
+                # Create a Job for complete book workflow processing
                 with transaction.atomic():
                     job = Job.objects.create(
                         user=request.user,
-                        job_type="novel_name_extract",
+                        job_type="book_workflow_process",
                         status=Job.Status.PENDING,
                         progress=0,
                     )
 
-                    # Enqueue Celery task
+                    # Enqueue new workflow Celery task
                     try:
-                        from books.tasks import extract_novel_name
-                        extract_novel_name.delay(
+                        from books.tasks_workflow import process_book_workflow
+                        process_book_workflow.delay(
                             job_id=str(job.id),
                             user_id=str(request.user.id),
                             book_id=str(book.book_id),
