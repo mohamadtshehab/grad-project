@@ -28,6 +28,18 @@ safety_settings = {
     HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY: HarmBlockThreshold.OFF,
 }
 
+quota_retry_policy = RetryPolicy(
+    max_retries=5,
+    retry_delay=1.0,
+    backoff_multiplier=2.0,
+    max_delay=60.0,
+    retry_on_exceptions=[
+        "google.api_core.exceptions.ResourceExhausted",  # Quota exceeded
+        "google.api_core.exceptions.QuotaExceeded",      # Rate limit
+        "google.api_core.exceptions.TooManyRequests"     # Rate limit
+    ]
+)
+
 profile_difference_llm = ChatGoogleGenerativeAI(model=model, 
                                             temperature=0.0, 
                                             safety_settings=safety_settings,

@@ -2,7 +2,6 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from user.models import User
 import uuid
-from django.core.files.base import ContentFile
 import os
 import ebooklib
 from ebooklib import epub
@@ -58,7 +57,7 @@ class Book(models.Model):
     file = models.FileField(upload_to=book_upload_path, validators=[validate_book_file], help_text="Original book file (EPUB only)")
     processing_status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('processing', 'Processing'), ('completed', 'Completed'), ('failed', 'Failed')], default='pending', help_text="Processing status of the book")
     processing_error = models.TextField(null=True, blank=True, help_text="Error message if processing failed")
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='books', help_text="User who uploaded the book")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='books', help_text="User who uploaded the book")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_deleted = models.BooleanField(default=False)
@@ -68,7 +67,7 @@ class Book(models.Model):
         db_table = 'book'
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user_id']),
+            models.Index(fields=['user']),
             models.Index(fields=['title']),
             models.Index(fields=['created_at']),
         ]

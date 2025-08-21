@@ -21,4 +21,10 @@ def router_from_first_name_querier_to_summarizer_or_chunk_updater(state: State):
         return 'chunk_updater'
 
 
+def router_from_summarizer_to_second_name_querier_or_profile_retriever_creator(state: State):
 
+    if state['prohibited_content']:
+        state['prohibited_content'] = False
+        return 'profile_retriever_creator'
+    else:
+        return 'second_name_querier'
