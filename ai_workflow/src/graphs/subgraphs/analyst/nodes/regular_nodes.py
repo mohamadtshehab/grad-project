@@ -21,7 +21,6 @@ def first_name_querier(state: State):
     
     characters = response.names if hasattr(response, 'names') else []
     
-    
     return {
         'last_appearing_names': characters
     } 
@@ -201,9 +200,7 @@ def empty_profile_validator(state: State):
         # Get the existing character ID
         existing_character = state['last_profiles'][i]
         
-        
         profile_dict = profile.model_dump()
-        
         
         # Update the database using Django adapter
         character_adapter.update_character(existing_character.id, profile_dict)
@@ -213,7 +210,6 @@ def empty_profile_validator(state: State):
             id=existing_character.id,
             profile=profile
         ))
-    
     
     return {
         'empty_profile_validation': empty_profile_validation,

@@ -15,98 +15,72 @@ def language_checker(state : State):
     Uses the check_text function to make sure the input text is in Arabic.
     Supports both EPUB and plain text files.
     """
-    try:
-        book = Book.objects.get(book_id=state['book_id'])
-        file_path = book.txt_file.path
-        detector = ArabicLanguageDetector()
-        result = detector.check_text(file_path)
-        book.detected_language = result
-        book.save()
-        
-        # Send validation result via standardized event
-        if 'progress_callback' in state:
-            if result != "ar":
-                error_event = create_validation_error_event(
-                    validation_stage="language_check",
-                    error_code="LANGUAGE_NOT_SUPPORTED",
-                    message="لغة الكتاب غير مدعومة",
-                    details="يدعم النظام حاليًا الكتب باللغة العربية فقط",
-                    user_action="يرجى رفع كتاب باللغة العربية"
-                )
-                state['progress_callback'](error_event)
-                return {'result': result, 'validation_passed': False}
-        
-        return {'result': result, 'validation_passed': result == "ar"}
-        
-    except Exception as e:
-        # Log full error server-side for debugging
-        logger.error(f"Unexpected error in language_checker: {str(e)}")
-        
-        # Send simple event to client (workflow continues)
-        if 'progress_callback' in state:
-            error_event = create_unexpected_error_event(
-                error_message="فشل في فحص لغة الكتاب"
+
+    book = Book.objects.get(book_id=state['book_id'])
+    file_path = book.txt_file.path
+    detector = ArabicLanguageDetector()
+    result = detector.check_text(file_path)
+    book.detected_language = result
+    book.save()
+    
+    # Send validation result via standardized event
+    if 'progress_callback' in state:
+        if result != "ar":
+            error_event = create_validation_error_event(
+                validation_stage="language_check",
+                error_code="LANGUAGE_NOT_SUPPORTED",
+                message="لغة الكتاب غير مدعومة",
+                details="يدعم النظام حاليًا الكتب باللغة العربية فقط",
+                user_action="يرجى رفع كتاب باللغة العربية"
             )
             state['progress_callback'](error_event)
-        
-        # Continue workflow with fallback
-        return {'result': 'unknown', 'validation_passed': True}
+            return
+    
+    return
+
     
 
 def text_quality_assessor(state):
     """
     Node that assesses the quality of Arabic text using Gemini AI.
     """
-    try:
-        book = Book.objects.get(book_id=state['book_id'])
-        file_path = book.txt_file.path
+    book = Book.objects.get(book_id=state['book_id'])
+    file_path = book.txt_file.path
+
+    formatted_chunks = get_validation_chunks(file_path,  chunk_size=30, num_chunks_to_select=5)
     
-        formatted_chunks = get_validation_chunks(file_path,  chunk_size=30, num_chunks_to_select=5)
-        
-        chain_input = {
-            "text": formatted_chunks
-        }
-        
-        response = text_quality_assessment_chain.invoke(chain_input)
-        
-        assessment = {
-            "quality_score": response.quality_score,
-            "quality_level": response.quality_level,
-            "issues": response.issues,
-            "suggestions": response.suggestions,
-            "reasoning": response.reasoning
-        }
-        book.quality_score = assessment["quality_score"]
-        book.save()
-        
-        # Send validation result via standardized event
-        if 'progress_callback' in state:
-            if assessment["quality_score"] < 0.5:
-                # Send validation error event
-                error_event = create_validation_error_event(
-                    validation_stage="text_quality",
-                    error_code="POOR_TEXT_QUALITY",
-                    message="جودة النص منخفضة",
-                    details=f"درجة الجودة: {assessment['quality_score']:.2f}. الحد الأدنى المطلوب: 0.5",
-                    user_action="يرجى رفع كتاب بجودة نص أفضل"
-                )
-                state['progress_callback'](error_event)
-                return {'validation_passed': False}
-            
-        return {'validation_passed': assessment["quality_score"] >= 0.5}
-    except Exception as e:
-        # Log full error server-side for debugging
-        logger.error(f"Unexpected error in language_checker: {str(e)}")
-        
-        # Send simple event to client (workflow continues)
-        if 'progress_callback' in state:
-            error_event = create_unexpected_error_event(
-                error_message="فشل في فحص لغة الكتاب"
+    chain_input = {
+        "text": formatted_chunks
+    }
+    
+    response = text_quality_assessment_chain.invoke(chain_input)
+    
+    assessment = {
+        "quality_score": response.quality_score,
+        "quality_level": response.quality_level,
+        "issues": response.issues,
+        "suggestions": response.suggestions,
+        "reasoning": response.reasoning
+    }
+    book.quality_score = assessment["quality_score"]
+    book.save()
+    
+    # Send validation result via standardized event
+    if 'progress_callback' in state:
+        if assessment["quality_score"] < 0.5:
+            # Send validation error event
+            error_event = create_validation_error_event(
+                validation_stage="text_quality",
+                error_code="POOR_TEXT_QUALITY",
+                message="جودة النص منخفضة",
+                details=f"درجة الجودة: {assessment['quality_score']:.2f}. الحد الأدنى المطلوب: 0.5",
+                user_action="يرجى رفع كتاب بجودة نص أفضل"
             )
             state['progress_callback'](error_event)
+            return
         
-        # Continue workflow with fallback
-        return {'result': 'unknown', 'validation_passed': True}
+    return
+
 
 def text_classifier(state: State):
     """
@@ -145,14 +119,13 @@ def text_classifier(state: State):
                 user_action="يرجى رفع كتاب أدبي (رواية أو مجموعة قصصية)"
             )
             state['progress_callback'](error_event)
-            return {'validation_passed': False}
+            return
     
     # If all validations passed, send success event
     if 'progress_callback' in state and classification["is_literary"]:
         success_event = create_validation_success_event()
         state['progress_callback'](success_event)
     
-    
-    return {'validation_passed': classification["is_literary"]}
+    return
 
 
