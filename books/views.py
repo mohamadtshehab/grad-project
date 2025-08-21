@@ -1,13 +1,10 @@
 from rest_framework import status, permissions, viewsets
-from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from django.http import Http404, HttpResponse, FileResponse
-from django.shortcuts import get_object_or_404
-from django.core.exceptions import PermissionDenied
-from django.conf import settings
+from django.http import FileResponse
 import os
 import mimetypes
+from books.tasks import process_book_workflow
 
 from .models import Book, epub_to_raw_html_string
 from .serializers import (
@@ -16,15 +13,8 @@ from .serializers import (
 )
 from utils.models import Job
 from django.utils import timezone
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.db import transaction
 from django.core.files.base import ContentFile
-
-
-
-
-
 
 class BookViewSet(viewsets.ModelViewSet):
     """
@@ -73,7 +63,11 @@ class BookViewSet(viewsets.ModelViewSet):
                         save=False
                     )
                     book.save(update_fields=['txt_file'])
-                
+                # if has chunks and characters, delete them
+                if book.chunks.exists() or book.characters.exists():
+                    book.chunks.all().delete()
+                    book.characters.all().delete()
+                    book.save(update_fields=['chunks', 'characters'])
                 
                 # Create a Job for complete book workflow processing
                 with transaction.atomic():
@@ -86,12 +80,10 @@ class BookViewSet(viewsets.ModelViewSet):
 
                     # Enqueue new workflow Celery task
                     try:
-                        from books.tasks_workflow import process_book_workflow
                         process_book_workflow.delay(
                             job_id=str(job.id),
                             user_id=str(request.user.id),
                             book_id=str(book.book_id),
-                            filename=book.file.name.split('/')[-1],
                         )
                     except Exception as e:
                         job.status = Job.Status.FAILED
@@ -100,6 +92,7 @@ class BookViewSet(viewsets.ModelViewSet):
                         job.save(update_fields=["status", "error", "finished_at", "updated_at"])
                         return Response({
                             "status": "error",
+                            "errors": str(e),
                             "en": "Failed to enqueue processing job",
                             "ar": "فشل في جدولة مهمة المعالجة",
                             "job_id": str(job.id),

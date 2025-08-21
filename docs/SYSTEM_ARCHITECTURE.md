@@ -1351,7 +1351,7 @@ CELERY_TIMEZONE = 'Asia/Dubai'
 
 # Task routing
 CELERY_TASK_ROUTES = {
-    'books.tasks_workflow.process_book_workflow': {'queue': 'ai_processing'},
+    'books.tasks.process_book_workflow': {'queue': 'ai_processing'},
     'authentication.tasks.send_password_reset_email': {'queue': 'email'},
     'authentication.tasks.send_welcome_email': {'queue': 'email'},
 }

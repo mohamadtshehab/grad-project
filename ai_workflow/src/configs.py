@@ -1,4 +1,4 @@
-GRAPH_CONFIG = {"configurable": {"thread_id": 1}, 'recursion_limit': 1000}
+GRAPH_CONFIG = {"configurable": {"thread_id": 1}, 'recursion_limit': 100000}
 FUZZY_MATCHING_CONFIG = {
     'similarity_thresholds': {
         'high_confidence': 0.85,      # Automatic merge threshold
@@ -12,7 +12,7 @@ FUZZY_MATCHING_CONFIG = {
 }
 
 CHUNKING_CONFIG = {
-    'chunk_size': 10000,
+    'chunk_size': 12000,
     'chunk_overlap': 200
 }
 
