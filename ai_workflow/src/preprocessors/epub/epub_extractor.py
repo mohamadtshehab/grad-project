@@ -99,7 +99,8 @@ class EPUBTextExtractor:
                             
                             try:
                                 if file_path in epub_zip.namelist():
-                                    content = epub_zip.read(file_path).decode('utf-8', errors='ignore')
+                                    content_bytes = epub_zip.read(file_path)
+                                    content = self._decode_content_safely(content_bytes)
                                     text = self._extract_text_from_html(content)
                                     if text.strip():
                                         text_parts.append(text)
@@ -113,6 +114,37 @@ class EPUBTextExtractor:
             raise ValueError(f"Invalid EPUB file: {epub_path}")
         except Exception as e:
             raise ValueError(f"Error extracting EPUB content: {str(e)}")
+    
+    def _decode_content_safely(self, content_bytes: bytes) -> str:
+        """
+        Safely decode content bytes with multiple encoding attempts.
+        
+        Args:
+            content_bytes: Raw bytes from file
+            
+        Returns:
+            Decoded string content
+        """
+        # List of encodings to try in order
+        encodings_to_try = [
+            'utf-8',
+            'utf-16',
+            'utf-16le',
+            'utf-16be', 
+            'latin-1',
+            'cp1252',
+            'iso-8859-1',
+            'ascii'
+        ]
+        
+        for encoding in encodings_to_try:
+            try:
+                return content_bytes.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+        
+        # If all encodings fail, use UTF-8 with error replacement
+        return content_bytes.decode('utf-8', errors='replace')
     
     def _extract_text_from_html(self, html_content: str) -> str:
         """
@@ -203,7 +235,8 @@ class EPUBTextExtractor:
                     continue
                 
                 try:
-                    content = epub_zip.read(file_name).decode('utf-8', errors='ignore')
+                    content_bytes = epub_zip.read(file_name)
+                    content = self._decode_content_safely(content_bytes)
                     text = self._extract_text_from_html(content)
                     if text.strip():
                         text_parts.append(text)

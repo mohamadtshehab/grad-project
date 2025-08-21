@@ -7,7 +7,7 @@ from langchain_google_genai import (
 from ai_workflow.src.schemas.output_structures import *
 from ai_workflow.src.language_models.tools import character_role_tool
 from dotenv import load_dotenv
-
+from langgraph.types import RetryPolicy
 load_dotenv()
 
 model = 'gemini-2.5-flash'
@@ -28,7 +28,19 @@ safety_settings = {
     HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY: HarmBlockThreshold.OFF,
 }
 
-profile_update_llm = ChatGoogleGenerativeAI(model=model, 
+quota_retry_policy = RetryPolicy(
+    max_retries=5,
+    retry_delay=1.0,
+    backoff_multiplier=2.0,
+    max_delay=60.0,
+    retry_on_exceptions=[
+        "google.api_core.exceptions.ResourceExhausted",  # Quota exceeded
+        "google.api_core.exceptions.QuotaExceeded",      # Rate limit
+        "google.api_core.exceptions.TooManyRequests"     # Rate limit
+    ]
+)
+
+profile_difference_llm = ChatGoogleGenerativeAI(model=model, 
                                             temperature=0.0, 
                                             safety_settings=safety_settings,
                                             ).bind_tools([character_role_tool]).with_structured_output(CharacterList)
@@ -41,6 +53,7 @@ name_query_llm = ChatGoogleGenerativeAI(model=model,
 summary_llm = ChatGoogleGenerativeAI(model=model,
                                      temperature=1.0, 
                                      safety_settings=safety_settings,
+                                     max_retries=3,
                                      ).with_structured_output(Summary)
 
 book_name_extraction_llm = ChatGoogleGenerativeAI(model=model,
