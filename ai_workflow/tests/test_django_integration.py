@@ -287,7 +287,7 @@ class StateManagementTestCase(TestCase):
         self.assertEqual(state['cleaned_text'], '')
         self.assertEqual(state['content_text'], '')
         self.assertIsNone(state['last_profiles'])
-        self.assertIsNone(state['last_appearing_characters'])
+        self.assertIsNone(state['last_appearing_names'])
     
     def test_create_initial_state_with_book(self):
         """Test creating initial state with book context."""

@@ -50,7 +50,10 @@ class ArabicLanguageDetector:
             print(f"[langdetect] Error: {e}")
             return False, None, None
 
-    def check_text(self, text: str, debug=False) -> bool:
+    def check_text(self, file_path: str, debug=False) -> bool:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            text = file.read()
+            
         is_ar_manual, percent = self.is_arabic_manual(text)
         is_ar_langid, langid_code = self.is_arabic_langid(text)
         is_ar_ld, ld_code, ld_prob = self.is_arabic_langdetect(text)
@@ -65,6 +68,10 @@ class ArabicLanguageDetector:
             is_ar_langid,
             is_ar_ld
         ])
-        return votes >= 2  # Majority voting
+        if votes >= 2:
+            detected_language = "ar"
+        else:
+            detected_language = "unknown"
+        return detected_language
 
 
