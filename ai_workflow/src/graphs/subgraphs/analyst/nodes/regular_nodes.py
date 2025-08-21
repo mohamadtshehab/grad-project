@@ -2,6 +2,7 @@ from ai_workflow.src.schemas.states import State
 from ai_workflow.src.databases.django_adapter import get_character_adapter
 from ai_workflow.src.schemas.output_structures import *
 from ai_workflow.src.language_models.chains import name_query_chain, profile_difference_chain, summary_chain, empty_profile_validation_chain
+from utils.websocket_events import create_chunk_ready_event
 
 def first_name_querier(state: State):
     """
@@ -20,12 +21,6 @@ def first_name_querier(state: State):
     
     characters = response.names if hasattr(response, 'names') else []
     
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="character_processing_progress",
-            node_name="first_name_querier",
-            result={"names_found": len(characters)}
-        )
     
     return {
         'last_appearing_names': characters
@@ -43,12 +38,6 @@ def second_name_querier(state: State):
     
     response = name_query_chain.invoke(chain_input)
     
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="character_processing_progress",
-            node_name="second_name_querier",
-            result={"names_found": len(response.names)}
-        )
     
     return {
         'last_appearing_names': response.names
@@ -96,12 +85,6 @@ def profile_retriever_creator(state: State):
                 profile=new_profile
             ))
     
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="character_processing_progress",
-            node_name="profile_retriever_creator",
-            result={"profiles_created": len(characters)}
-        )
     
     return {'last_profiles': characters}
 
@@ -137,14 +120,7 @@ def profile_refresher(state: State):
             id=existing_character.id,
             profile=profile
         ))
-    
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="character_processing_progress",
-            node_name="profile_refresher",
-            result={"profiles_updated": len(updated_characters)}
-        )
-    
+        
     return {
         'last_profiles': updated_characters,
     }
@@ -154,6 +130,14 @@ def chunk_updater(state: State):
     Node that updates the previous and current chunks in the state.
     """
     updated_chunk_num = state['chunk_num'] + 1
+    
+    # Send chunk ready event using standardized structure
+    if 'progress_callback' in state:
+        chunk_ready_event = create_chunk_ready_event(
+            chunk_number=state['chunk_num']  # Current chunk that was just processed
+        )
+        state['progress_callback'](chunk_ready_event)
+    
     if updated_chunk_num == int(state['num_of_chunks']):
         return {
             'no_more_chunks': True,
@@ -183,14 +167,7 @@ def summarizer(state: State):
         "names": str(character_names)
     }
     response = summary_chain.invoke(chain_input)
-    
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="character_processing_progress",
-            node_name="summarizer",
-            result={"summary_length": len(response.summary)}
-        )
-    
+        
     return {'last_summary': response.summary}
 
 
@@ -237,15 +214,6 @@ def empty_profile_validator(state: State):
             profile=profile
         ))
     
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="character_processing_progress",
-            node_name="empty_profile_validator",
-            result={
-                "validation_passed": empty_profile_validation,
-                "profiles_processed": len(updated_characters)
-            }
-        )
     
     return {
         'empty_profile_validation': empty_profile_validation,

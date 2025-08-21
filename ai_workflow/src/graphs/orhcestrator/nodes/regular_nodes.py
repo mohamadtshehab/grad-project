@@ -1,6 +1,7 @@
 from ai_workflow.src.schemas.states import State
 from books.models import Book
 from ai_workflow.src.extractors.book_name_extractor import extract_book_name_from_file
+from utils.websocket_events import create_book_extracted_event
 
 def name_extractor(state: State):
     """
@@ -8,21 +9,16 @@ def name_extractor(state: State):
     Uses the same logic as the existing extract_book_name_from_file function.
     """
     book = Book.objects.get(book_id=state['book_id'])
-    filename = book.txt_file.name
-    try:
-        response = extract_book_name_from_file(book.txt_file.path)
-        book.title = response.book_name
-        book.save()
-    except Exception as e:
-        fallback_name = filename.rsplit('.', 1)[0] if '.' in filename else filename
-        book.title = fallback_name
-        book.save()
-        
+    response = extract_book_name_from_file(book.txt_file.path)
+    book.title = response.book_name
+    book.save()
+    
+    # Send book extracted event using standardized structure
     if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="name_extraction_completed",
-            node_name="name_extractor",
-            result=book.title
+        book_extracted_event = create_book_extracted_event(
+            book_name=response.book_name,
+            confidence=response.confidence if hasattr(response, 'confidence') else None
         )
+        state['progress_callback'](book_extracted_event)
     
     return

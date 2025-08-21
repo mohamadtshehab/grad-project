@@ -36,8 +36,8 @@ def extract_book_name_from_file(file_path: str):
         
         # Format the prompt with file content
         chain_input = {
-            "first_300_chars": first_3000_chars,
-            "last_100_chars": last_1000_chars,
+            "first_3000_chars": first_3000_chars,
+            "last_1000_chars": last_1000_chars,
             'filename': filename
         }
     

@@ -5,6 +5,7 @@ from ai_workflow.src.preprocessors.metadata_remover import remove_book_metadata
 from ai_workflow.src.configs import CHUNKING_CONFIG, METADATA_REMOVAL_CONFIG
 from books.models import Book
 from chunks.models import Chunk
+from utils.websocket_events import create_preprocessing_complete_event
 
 def chunker(state: State):
     """
@@ -25,13 +26,6 @@ def chunker(state: State):
             chunk_number=i,
         )
 
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="chunks_ready",
-            node_name="raw_chunker",
-            result={"total_chunks": len(chunks)}
-        )
-        
     return {
         'num_of_chunks': len(chunks),
     }
@@ -54,15 +48,6 @@ def cleaner(state: State):
         cleaned_text = clean_arabic_text_comprehensive(chunk.chunk_text)
         cleaned_chunks.append(cleaned_text)
             
-    if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="preprocessing_progress",
-            node_name="cleaner_completed",
-            result={
-                "cleaned_chunks_ready": True,
-                "total_cleaned_chunks": len(cleaned_chunks)
-            }
-        )
     
     return {
         'clean_chunks': cleaned_chunks
@@ -81,9 +66,11 @@ def metadata_remover(state: State):
     state['clean_chunks'][0] = first_chunk_without_metadata
     
     if 'progress_callback' in state:
-        state['progress_callback'](
-            event_type="preprocessing_progress",
-            node_name="metadata_remover",
+        preprocessing_complete_event = create_preprocessing_complete_event(
+            total_chunks=len(state['clean_chunks']),
+            chunk_size=CHUNKING_CONFIG.get('chunk_size')
         )
+        state['progress_callback'](preprocessing_complete_event)
+
         
     return

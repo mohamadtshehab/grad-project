@@ -38,6 +38,7 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
+    'graduation_backend',  # Main project app - required for management commands
     'utils',
     'user',
     'books',

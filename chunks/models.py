@@ -9,7 +9,7 @@ class Chunk(models.Model):
     """
     chunk_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     chunk_text = models.TextField(help_text="The actual text content of the chunk")
-    chunk_number = models.PositiveIntegerField(help_text="Sequential number of the chunk within the book")
+    chunk_number = models.IntegerField(help_text="Sequential number of the chunk within the book")
     
     # Foreign key to Book
     book_id = models.ForeignKey(
