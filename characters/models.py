@@ -1,34 +1,38 @@
+# characters/models.py
+
+import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.db.models import Q, F
+
+# It's good practice to import related models from their respective apps.
+# Ensure these models exist in the specified apps.
 from books.models import Book
 from chunks.models import Chunk
-import uuid
-import json
 
-class UnicodeJSONEncoder(json.JSONEncoder):
-    def __init__(self, *args, **kwargs):
-        # ensure_ascii=False keeps Unicode characters as-is (not escaped)
-        kwargs['ensure_ascii'] = False
-        super().__init__(*args, **kwargs)
-        
+
 class Character(models.Model):
     """
-    Model for storing character profiles extracted by AI workflow
+    Model for storing character profiles extracted by an AI workflow. 
+    Each character is unique to a specific book.
     """
-    character_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Character data stored as JSON for flexibility
-    character_data = models.JSONField(
-        help_text="Character profile data including name, age, role, physical_characteristics, personality, events, relationships, aliases",
-        encoder=UnicodeJSONEncoder
+    character_id = models.UUIDField(
+        primary_key=True, 
+        default=uuid.uuid4, 
+        editable=False,
+        help_text="Unique identifier for each character."
     )
     
-    # Foreign key to Book
-    book_id = models.ForeignKey(
+    # The custom encoder is removed as Django's JSONField handles Unicode well.
+    character_data = models.JSONField(
+        help_text="Flexible JSON data for the character's profile (e.g., name, age, personality)."
+    )
+    
+    book = models.ForeignKey(
         Book,
         on_delete=models.CASCADE,
         related_name='characters',
-        help_text="Book this character appears in"
+        help_text="The book this character belongs to."
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -36,79 +40,47 @@ class Character(models.Model):
     
     class Meta:
         db_table = 'character'
-        ordering = ['book_id', 'created_at']
+        ordering = ['book', 'created_at']
         indexes = [
-            models.Index(fields=['book_id']),
+            models.Index(fields=['book']),
             models.Index(fields=['created_at']),
         ]
     
     def __str__(self):
-        name = self.character_data.get('name', 'Unknown') if self.character_data else 'Unknown'
-        return f"{name} in {self.book_id.title}"
+        """Returns a human-readable representation of the character."""
+        name = self.character_data.get('name', 'Unknown Character')
+        return f"{name} in '{self.book.title}'"
     
     @property
     def name(self):
-        """Get character name from JSON data"""
+        """A convenient property to access the character's name from the JSON data."""
         return self.character_data.get('name', '') if self.character_data else ''
-    
-    @property
-    def role(self):
-        """Get character role from JSON data"""
-        return self.character_data.get('role', '') if self.character_data else ''
-    
-    @property
-    def age(self):
-        """Get character age from JSON data"""
-        return self.character_data.get('age', '') if self.character_data else ''
-    
-    def to_dict(self):
-        """Convert character to dictionary format for AI workflow"""
-        return {
-            'id': str(self.character_id),
-            'profile': self.character_data or {}
-        }
-    
-    @classmethod
-    def from_ai_workflow(cls, book, character_data):
-        """Create character from AI workflow data"""
-        return cls.objects.create(
-            book_id=book,
-            character_data=character_data
-        )
-    
-    def update_from_ai_workflow(self, character_data):
-        """Update character from AI workflow data"""
-        self.character_data = character_data
-        self.save()
-        return self
 
 
 class ChunkCharacter(models.Model):
     """
-    Junction table linking characters to chunks with mention details
+    A through model linking a Character to a Chunk where they are mentioned.
+    This acts as a many-to-many relationship with extra data.
     """
-    # Composite primary key using chunk_id and character_id
-    chunk_id = models.ForeignKey(
+    chunk = models.ForeignKey(
         Chunk,
         on_delete=models.CASCADE,
-        related_name='character_mentions',
-        help_text="Chunk where character is mentioned"
+        related_name='character_mentions'
     )
-    character_id = models.ForeignKey(
+    character = models.ForeignKey(
         Character,
         on_delete=models.CASCADE,
-        related_name='chunk_mentions',
-        help_text="Character being mentioned"
+        related_name='chunk_mentions'
     )
     
     mention_count = models.PositiveIntegerField(
         default=1,
-        help_text="Number of times character is mentioned in this chunk"
+        help_text="Number of times the character is mentioned in this chunk."
     )
     position_info = models.JSONField(
         null=True,
         blank=True,
-        help_text="JSON data containing position information of mentions within the chunk"
+        help_text="JSON data on the positions of mentions within the chunk."
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -116,104 +88,93 @@ class ChunkCharacter(models.Model):
     
     class Meta:
         db_table = 'chunk_character'
-        unique_together = ['chunk_id', 'character_id']
-        ordering = ['chunk_id', 'character_id']
+        # This constraint ensures a character can only be linked to a chunk once.
+        unique_together = ['chunk', 'character']
+        ordering = ['chunk', 'character']
         indexes = [
-            models.Index(fields=['chunk_id']),
-            models.Index(fields=['character_id']),
-            models.Index(fields=['chunk_id', 'character_id']),
+            # Add an index on 'character' for efficient lookups of all chunks
+            # a character appears in. The unique_together above already creates
+            # an index that is efficient for lookups starting with 'chunk'.
+            models.Index(fields=['character']),
         ]
     
     def __str__(self):
-        return f"{self.character_id.name} in {self.chunk_id}"
-    
-    @property
-    def character_name(self):
-        """Get character name"""
-        return self.character_id.name
-    
-    @property
-    def chunk_number(self):
-        """Get chunk number"""
-        return self.chunk_id.chunk_number
+        return f"Mention of {self.character.name} in {self.chunk}"
 
 
 class CharacterRelationship(models.Model):
     """
-    Model for storing relationships between characters
+    Defines a relationship between two characters within the context of a single book.
     """
-    RELATIONSHIP_TYPES = [
-        ('family', 'Family'),
-        ('friend', 'Friend'),
-        ('enemy', 'Enemy'),
-        ('romantic', 'Romantic'),
-        ('colleague', 'Colleague'),
-        ('mentor', 'Mentor'),
-        ('student', 'Student'),
-        ('ally', 'Ally'),
-        ('rival', 'Rival'),
-        ('other', 'Other'),
-    ]
-    
-    character_id_1 = models.ForeignKey(
+
+    # Using more descriptive field names like 'from_character' and 'to_character'
+    from_character = models.ForeignKey(
         Character,
         on_delete=models.CASCADE,
-        related_name='relationships_as_character_1',
-        help_text="First character in the relationship"
+        related_name='relationships_from',
+        help_text="The source character in the relationship."
     )
-    character_id_2 = models.ForeignKey(
+    to_character = models.ForeignKey(
         Character,
         on_delete=models.CASCADE,
-        related_name='relationships_as_character_2',
-        help_text="Second character in the relationship"
+        related_name='relationships_to',
+        help_text="The target character in the relationship."
     )
     
     relationship_type = models.CharField(
         max_length=50,
-        choices=RELATIONSHIP_TYPES,
-        help_text="Type of relationship between characters"
+        help_text="The nature of the relationship."
     )
     description = models.TextField(
         blank=True,
-        help_text="Detailed description of the relationship"
+        help_text="A detailed description of the relationship."
     )
     
-    # Foreign key to Book (relationships are book-specific)
-    book_id = models.ForeignKey(
+    book = models.ForeignKey(
         Book,
         on_delete=models.CASCADE,
         related_name='character_relationships',
-        help_text="Book where this relationship exists"
+        help_text="The book in which this relationship exists."
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = 'character_relationship'
-        unique_together = ['character_id_1', 'character_id_2', 'book_id']
-        ordering = ['book_id', 'character_id_1', 'character_id_2']
-        indexes = [
-            models.Index(fields=['character_id_1']),
-            models.Index(fields=['character_id_2']),
-            models.Index(fields=['book_id']),
-            models.Index(fields=['relationship_type']),
+        unique_together = ['from_character', 'to_character', 'book']
+        ordering = ['book', 'from_character', 'to_character']
+        constraints = [
+            # Ensures a character cannot be related to themselves.
+            models.CheckConstraint(
+                check=~Q(from_character=F('to_character')),
+                name='prevent_self_relationship'
+            ),
+            # Enforces a canonical order to prevent duplicate A->B and B->A entries.
+            # Note: This requires character_id to be a comparable type like UUID or Integer.
+            models.CheckConstraint(
+                check=Q(from_character__lt=F('to_character')),
+                name='canonical_character_order'
+            )
         ]
-    
+
     def __str__(self):
-        return f"{self.character_id_1.name} - {self.relationship_type} - {self.character_id_2.name}"
-    
+        return f"{self.from_character.name} -> {self.get_relationship_type_display()} -> {self.to_character.name}"
+
     def clean(self):
-        """Validate that a character cannot have a relationship with itself"""
-        if self.character_id_1 == self.character_id_2:
-            raise ValidationError("A character cannot have a relationship with itself")
-    
-    @property
-    def character_1_name(self):
-        """Get first character name"""
-        return self.character_id_1.name
-    
-    @property
-    def character_2_name(self):
-        """Get second character name"""
-        return self.character_id_2.name
+        """
+        Custom validation to enforce canonical order before saving.
+        This makes it user-friendly by auto-swapping if entered in non-canonical order.
+        """
+        if self.from_character and self.to_character:
+            # Enforce that both characters belong to the same book
+            if self.from_character.book != self.to_character.book:
+                raise ValidationError("Both characters must belong to the same book.")
+            
+            # Auto-assign the relationship's book from the characters
+            self.book = self.from_character.book
+
+            # Automatically swap characters to maintain canonical order (from.id < to.id)
+            # We use the string representation of UUIDs for comparison
+            if str(self.from_character.pk) > str(self.to_character.pk):
+                self.from_character, self.to_character = self.to_character, self.from_character

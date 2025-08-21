@@ -12,6 +12,7 @@ class State(TypedDict):
     validation_passed: bool
     clean_chunks: list[str]
     progress_callback: Optional[Callable]
+    prohibited_content: bool
 
 def create_initial_state(book_id: str, progress_callback: Optional[Callable] = None):
     """
@@ -30,6 +31,7 @@ def create_initial_state(book_id: str, progress_callback: Optional[Callable] = N
         'num_of_chunks': 0,
         'validation_passed': True,
         'clean_chunks': [],
+        'prohibited_content': False
         }
     
     # Add callback if provided

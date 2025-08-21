@@ -21,7 +21,7 @@ def chunker(state: State):
     
     for i, chunk in enumerate(chunks):
         Chunk.objects.create(
-            book_id=book,
+            book=book,
             chunk_text=chunk,
             chunk_number=i,
         )
@@ -38,7 +38,7 @@ def cleaner(state: State):
     book = Book.objects.get(book_id=state['book_id'])
     
     # Get all raw chunks from database, ordered by chunk_number
-    raw_chunks = Chunk.objects.filter(book_id=book).order_by('chunk_number')
+    raw_chunks = Chunk.objects.filter(book=book).order_by('chunk_number')
     
     if not raw_chunks.exists():
         raise ValueError(f"No chunks found for book {book.book_id}")

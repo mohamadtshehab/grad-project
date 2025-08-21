@@ -8,10 +8,8 @@ import os
 import sys
 import django
 from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from faker import Faker
 import random
-from datetime import datetime, timedelta
 
 # Add the project root to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -47,9 +45,7 @@ class DatabaseSeeder:
         # Character names and data for Arabic context
         self.character_templates = [
             {
-                "name": "أحمد",
-                "age": "35",
-                "role": "البطل",
+                "name": "أحمد", "age": "35", "role": "البطل",
                 "physical_characteristics": ["طويل القامة", "أسمر البشرة", "عيون بنية"],
                 "personality": "طيب القلب، شجاع، مساعد للآخرين",
                 "events": ["خرج إلى الحديقة", "ساعد جاره المريض", "وجد كنزاً مدفوناً"],
@@ -57,9 +53,7 @@ class DatabaseSeeder:
                 "aliases": ["أبو محمد", "الرجل الطيب"]
             },
             {
-                "name": "فاطمة",
-                "age": "30",
-                "role": "الزوجة",
+                "name": "فاطمة", "age": "30", "role": "الزوجة",
                 "physical_characteristics": ["متوسطة الطول", "شعر أسود", "عيون خضراء"],
                 "personality": "حنونة، ذكية، مهتمة بالأطفال",
                 "events": ["ذهبت إلى السوق", "التقت بمريم", "اشترت هدية لابنتها"],
@@ -67,9 +61,7 @@ class DatabaseSeeder:
                 "aliases": ["أم سارة", "الأم الحنونة"]
             },
             {
-                "name": "علي",
-                "age": "22",
-                "role": "الطالب",
+                "name": "علي", "age": "22", "role": "الطالب",
                 "physical_characteristics": ["نحيف", "طويل", "يرتدي نظارات"],
                 "personality": "مجتهد، طموح، محب للأدب",
                 "events": ["يدرس في الجامعة", "يكتب القصص", "يحلم بأن يصبح كاتباً"],
@@ -77,9 +69,7 @@ class DatabaseSeeder:
                 "aliases": ["الطالب المجتهد", "الكاتب الشاب"]
             },
             {
-                "name": "مريم",
-                "age": "28",
-                "role": "الصديقة",
+                "name": "مريم", "age": "28", "role": "الصديقة",
                 "physical_characteristics": ["قصيرة القامة", "شعر بني", "ابتسامة جميلة"],
                 "personality": "مرحة، نشيطة، محبة للتسوق",
                 "events": ["التقت بفاطمة", "نصحتها بشراء كتاب", "ذهبت معها إلى المكتبة"],
@@ -87,9 +77,7 @@ class DatabaseSeeder:
                 "aliases": ["المرأة المرحة", "الصديقة الوفية"]
             },
             {
-                "name": "خديجة",
-                "age": "40",
-                "role": "الطبيبة",
+                "name": "خديجة", "age": "40", "role": "الطبيبة",
                 "physical_characteristics": ["أنيقة المظهر", "شعر قصير", "عيون ذكية"],
                 "personality": "حكيمة، طيبة، مخلصة في عملها",
                 "events": ["تعالج المرضى", "تساعد الفقراء", "تعمل في العيادة"],
@@ -112,7 +100,6 @@ class DatabaseSeeder:
     def create_users(self, count=10):
         """Create test users"""
         print(f"👥 Creating {count} users...")
-        
         for i in range(count):
             user = User.objects.create_user(
                 email=fake.email(),
@@ -123,181 +110,126 @@ class DatabaseSeeder:
                 is_active=True
             )
             self.users.append(user)
-            
         print(f"✅ Created {len(self.users)} users!")
 
-    def create_books(self, count=15):
+    def create_books(self, count=8):
         """Create test books"""
         print(f"📚 Creating {count} books...")
-        
         book_titles = [
-             "الطريق", "بين القصرين", "قصر الشوق", "السكرية",
-            "أولاد حارتنا", "الحرافيش", "ملحمة الحرافيش", "الكرنك", "المرايا",
-            "حديث الصباح والمساء", "أصداء السيرة الذاتية", "الباقي من الزمن ساعة",
-            "رحلة ابن فطومة", "ليالي ألف ليلة"
+            "الطريق", "بين القصرين", "قصر الشوق", "السكرية", "أولاد حارتنا", 
+            "الحرافيش", "ملحمة الحرافيش", "الكرنك", "المرايا", "حديث الصباح والمساء"
         ]
-        
-        authors = [
-            "نجيب محفوظ", "يوسف إدريس", "إحسان عبد القدوس", "توفيق الحكيم",
-            "طه حسين", "عباس محمود العقاد", "مصطفى صادق الرافعي"
-        ]
+        authors = ["نجيب محفوظ", "يوسف إدريس", "إحسان عبد القدوس", "توفيق الحكيم", "طه حسين"]
         
         for i in range(count):
-            # Create a dummy text file
             book_content = "\n\n".join(random.choices(self.arabic_text_samples, k=10))
             file_content = ContentFile(book_content.encode('utf-8'))
-            
-            title = random.choice(book_titles) if i < len(book_titles) else fake.sentence(nb_words=3)
-            filename = f"book_{i+1}.txt"
+            title = book_titles[i] if i < len(book_titles) else fake.sentence(nb_words=3)
+            filename = f"book_{i+1}.epub"
             
             book = Book.objects.create(
                 title=title,
                 author=random.choice(authors),
                 description=fake.text(max_nb_chars=200),
-                user_id=random.choice(self.users)
+                user=random.choice(self.users)
             )
-            
-            # Save the file
             book.file.save(filename, file_content, save=True)
             self.books.append(book)
-            
         print(f"✅ Created {len(self.books)} books!")
 
     def create_chunks(self):
         """Create text chunks for each book"""
         print("📄 Creating text chunks...")
-        
         for book in self.books:
-            # Create 5-10 chunks per book
             chunk_count = random.randint(5, 10)
-            
             for i in range(chunk_count):
                 chunk_text = random.choice(self.arabic_text_samples)
-                # Add some variation to the text
-                chunk_text += " " + fake.text(max_nb_chars=300)
-                
                 chunk = Chunk.objects.create(
                     chunk_text=chunk_text,
                     chunk_number=i + 1,
-                    book_id=book,
-                    start_position=i * 500,
-                    end_position=(i + 1) * 500,
+                    book=book,
                     word_count=len(chunk_text.split())
                 )
                 self.chunks.append(chunk)
-                
         print(f"✅ Created {len(self.chunks)} chunks!")
 
     def create_characters(self):
         """Create characters for books"""
         print("👤 Creating characters...")
-        
         for book in self.books:
-            # Create 3-5 characters per book
             character_count = random.randint(3, 5)
-            book_characters = []
-            
             for i in range(character_count):
                 template = random.choice(self.character_templates)
-                
-                # Add some variation to avoid exact duplicates
                 character_data = {
                     "name": template["name"] + (f" {i+1}" if i > 0 else ""),
                     "age": str(random.randint(20, 60)),
                     "role": template["role"],
-                    "physical_characteristics": template["physical_characteristics"][:],
                     "personality": template["personality"],
-                    "events": random.choices(template["events"], k=random.randint(2, 4)),
-                    "relationships": [],  # Will be filled later
-                    "aliases": template["aliases"][:]
                 }
-                
                 character = Character.objects.create(
-                    book_id=book,
+                    book=book,
                     character_data=character_data
                 )
-                
                 self.characters.append(character)
-                book_characters.append(character)
-            
-            # Update relationships within the book
-            for char in book_characters:
-                relationships = []
-                other_chars = [c for c in book_characters if c != char]
-                for other_char in random.choices(other_chars, k=random.randint(1, 2)):
-                    relationships.append(f"{other_char.name}: صديق")
-                
-                char.character_data["relationships"] = relationships
-                char.save()
-                
         print(f"✅ Created {len(self.characters)} characters!")
 
     def create_chunk_characters(self):
         """Create chunk-character relationships"""
         print("🔗 Creating chunk-character relationships...")
-        
         relationships_count = 0
-        
         for book in self.books:
             book_chunks = list(book.chunks.all())
             book_characters = list(book.characters.all())
-            
+            if not book_characters:
+                continue
             for chunk in book_chunks:
-                # Each chunk mentions 1-3 characters (without duplicates)
                 num_mentions = random.randint(1, min(3, len(book_characters)))
-                mentioned_characters = random.sample(
-                    book_characters, 
-                    k=num_mentions
-                )
-                
+                mentioned_characters = random.sample(book_characters, k=num_mentions)
                 for character in mentioned_characters:
                     ChunkCharacter.objects.create(
-                        chunk_id=chunk,
-                        character_id=character,
-                        mention_count=random.randint(1, 5),
-                        position_info={
-                            "positions": [random.randint(0, len(chunk.chunk_text)) for _ in range(random.randint(1, 3))],
-                            "context": "mentioned in narrative"
-                        }
+                        chunk=chunk,
+                        character=character,
+                        mention_count=random.randint(1, 5)
                     )
                     relationships_count += 1
-                    
         print(f"✅ Created {relationships_count} chunk-character relationships!")
 
     def create_character_relationships(self):
         """Create character relationships"""
         print("💕 Creating character relationships...")
-        
         relationships_count = 0
-        relationship_types = [
-            'family', 'friend', 'enemy', 'romantic', 'colleague', 
-            'mentor', 'ally', 'rival', 'other'
-        ]
+        relationship_types = ['family', 'friend', 'enemy', 'romantic', 'colleague']
         
         for book in self.books:
             book_characters = list(book.characters.all())
-            
             if len(book_characters) < 2:
                 continue
-                
-            # Create relationships between characters in the same book
+            
             for i, char1 in enumerate(book_characters):
                 for char2 in book_characters[i+1:]:
-                    # 50% chance to create a relationship
                     if random.random() < 0.5:
+                        
+                        # --- FIX STARTS HERE ---
+                        # Enforce canonical order (pk of 'from' must be less than pk of 'to').
+                        # We compare the string representation of the UUIDs.
+                        if str(char1.pk) > str(char2.pk):
+                            from_char, to_char = char2, char1
+                        else:
+                            from_char, to_char = char1, char2
+                        # --- FIX ENDS HERE ---
+
                         relationship_type = random.choice(relationship_types)
                         
                         CharacterRelationship.objects.create(
-                            character_id_1=char1,
-                            character_id_2=char2,
+                            from_character=from_char, # Use the sorted variable
+                            to_character=to_char,   # Use the sorted variable
                             relationship_type=relationship_type,
-                            description=f"{char1.name} و {char2.name} لديهما علاقة {relationship_type}",
-                            book_id=book
+                            description=f"{from_char.name} و {to_char.name} لديهما علاقة {relationship_type}",
+                            book=book
                         )
                         relationships_count += 1
-                        
         print(f"✅ Created {relationships_count} character relationships!")
-
+    
     def print_summary(self):
         """Print summary of created data"""
         print("\n" + "="*50)
@@ -311,38 +243,28 @@ class DatabaseSeeder:
         print(f"💕 Character relationships: {CharacterRelationship.objects.count()}")
         print("="*50)
         
-        # Print some sample data
-        print("\n📋 SAMPLE DATA:")
-        print("-" * 30)
-        
-        sample_user = User.objects.first()
-        if sample_user:
-            print(f"Sample User: {sample_user.name} ({sample_user.email})")
-            
         sample_book = Book.objects.first()
         if sample_book:
-            print(f"Sample Book: {sample_book.title} by {sample_book.author}")
-            
+            print(f"\n📋 Sample Book: {sample_book.title} by {sample_book.author}")
+        
         sample_character = Character.objects.first()
         if sample_character:
-            print(f"Sample Character: {sample_character.name} - {sample_character.role}")
-            
+            print(f"📋 Sample Character: {sample_character.name} - {sample_character.character_data.get('role', 'Unknown')}")
+        
         print("\n🎉 Database seeding completed successfully!")
 
     def seed_all(self):
         """Run the complete seeding process"""
         print("🌱 Starting database seeding...")
         print("="*50)
-        
         self.clear_database()
-        self.create_users(10)
-        self.create_books(8)
+        self.create_users()
+        self.create_books()
         self.create_chunks()
         self.create_characters()
         self.create_chunk_characters()
         self.create_character_relationships()
         self.print_summary()
-
 
 if __name__ == "__main__":
     seeder = DatabaseSeeder()

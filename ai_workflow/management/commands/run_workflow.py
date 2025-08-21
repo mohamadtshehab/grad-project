@@ -83,7 +83,7 @@ class Command(BaseCommand):
         if options['clear_existing']:
             self.stdout.write('Clearing existing characters...')
             try:
-                Chunk.objects.filter(book_id=book_id).delete()
+                Chunk.objects.filter(book=book_id).delete()
                 adapter = get_character_adapter(book_id)
                 adapter.clear_database()
                 self.stdout.write(self.style.SUCCESS('Existing characters cleared!'))
