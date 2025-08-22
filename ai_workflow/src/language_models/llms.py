@@ -7,6 +7,7 @@ from langchain_google_genai import (
 from ai_workflow.src.schemas.output_structures import *
 from ai_workflow.src.language_models.tools import character_role_tool
 from dotenv import load_dotenv
+from langgraph.types import RetryPolicy
 
 load_dotenv()
 
@@ -38,9 +39,15 @@ name_query_llm = ChatGoogleGenerativeAI(model=model,
                                         safety_settings=safety_settings,
                                         ).with_structured_output(NameList)
 
+# summary_llm = ChatGoogleGenerativeAI(model=model,
+#                                      temperature=1.0, 
+#                                      safety_settings=safety_settings,
+#                                      ).with_structured_output(Summary)
+
 summary_llm = ChatGoogleGenerativeAI(model=model,
                                      temperature=1.0, 
                                      safety_settings=safety_settings,
+                                     max_retries=3,
                                      ).with_structured_output(Summary)
 
 book_name_extraction_llm = ChatGoogleGenerativeAI(model=model,

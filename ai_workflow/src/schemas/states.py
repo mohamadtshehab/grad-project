@@ -10,27 +10,20 @@ class State(TypedDict):
     chunk_generator: object
     current_chunk: str
     previous_chunk: str
-    last_profiles: list[Character] | None
-    last_appearing_characters: list[Character] | None
+    last_profiles_by_name: dict[str, list[Character]] | None   # <== التعديل الأساسي
+    last_appearing_characters: list[str] | None                # بترجع أسماء فقط مو Character
     book_id: Optional[str]
     no_more_chunks: bool
-    is_arabic : bool
+    is_arabic: bool
     last_summary: str
     text_quality_assessment: TextQualityAssessment | None
     text_classification: TextClassification | None
     empty_profile_validation: EmptyProfileValidation | None
-    chunk_num:int
-    num_of_chunks:int
+    chunk_num: int
+    num_of_chunks: int
+    summary_status: str
 
 def create_initial_state(book_id: str, file_path: str):
-    """
-    Create the initial state with validation chunks generated.
-    
-    Args:
-        book_id: Optional book ID for character context (will auto-resolve file path)
-        file_path: Optional file path to process (defaults to test file if no book_id)
-    """
-        
     return {
         'file_path': file_path,
         'cleaned_text': '',
@@ -38,7 +31,7 @@ def create_initial_state(book_id: str, file_path: str):
         'chunk_generator': None,
         'current_chunk': '',
         'previous_chunk': '',
-        'last_profiles': None,
+        'last_profiles_by_name': None,   # <== هون بدل last_profiles
         'last_appearing_characters': None,
         'book_id': book_id,
         'no_more_chunks': False,
@@ -48,5 +41,6 @@ def create_initial_state(book_id: str, file_path: str):
         'text_classification': None,
         'empty_profile_validation': None,
         'chunk_num': 0,
-        'num_of_chunks': 0
+        'num_of_chunks': 0,
+        'summary_status': ''
     }

@@ -68,3 +68,19 @@ def router_from_empty_profile_validator_to_chunk_updater_or_end(state: State):
         return 'END'
     else:
         return 'chunk_updater'
+
+
+
+def router_from_summarizer_to_second_name_querier_or_chunk_updater(state: State):
+    """
+    Node that routes based on the summarizer response.
+    If summarizer says "next chunk" -> go to chunk_updater
+    If summarizer says "true" -> go to second_name_querier
+    """
+    status = str(state.get("summary_status", "")).strip().lower()
+    if status == "next_chunk":
+        return "chunk_updater"
+    elif status == "done":
+        return "second_name_querier"
+    else:
+        return "chunk_updater"
