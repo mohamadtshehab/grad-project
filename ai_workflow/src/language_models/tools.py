@@ -11,13 +11,12 @@ class CharacterRoleTool(BaseTool):
     Use this tool when you need to determine the most appropriate character role for a given character description.
     """
     
-    def _run(self, character_description: str = "", personality: str = "", 
+    def _run(self,  personality: str = "", 
              events: str = "", relationships: str = "") -> str:
         """
         Get character role definitions and classify a character's role.
         
         Args:
-            character_description: General description of the character
             personality: Personality traits of the character
             events: Events involving the character (comma-separated)
             relationships: Relationships with other characters (comma-separated)
@@ -26,7 +25,8 @@ class CharacterRoleTool(BaseTool):
             Formatted string with available roles and classification result
         """
         # Load character terms
-        csv_path = "resources/character_data/character_terms_arabic.csv"
+        #project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        csv_path = r"C:\Users\Hp\Desktop\grad\grad-project\ai_workflow\resources\character_data\character_terms_arabic.csv "
         if not os.path.exists(csv_path):
             return "Error: Character terms file not found"
         
@@ -57,10 +57,9 @@ class CharacterRoleTool(BaseTool):
             output += f"{i}. {role_def}\n\n"
         
         # If character information is provided, also include classification
-        if character_description or personality:
+        if  personality:
             output += "\nCHARACTER TO CLASSIFY:\n"
             output += "=" * 30 + "\n"
-            output += f"Description: {character_description}\n"
             output += f"Personality: {personality}\n"
             if events:
                 output += f"Events: {events}\n"
@@ -70,10 +69,10 @@ class CharacterRoleTool(BaseTool):
         
         return output
     
-    def _arun(self, character_description: str = "", personality: str = "", 
+    def _arun(self, personality: str = "", 
               events: str = "", relationships: str = "") -> str:
         """Async version of the tool."""
-        return self._run(character_description, personality, events, relationships)
+        return self._run( personality, events, relationships)
 
 # Create the tool instance
 character_role_tool = CharacterRoleTool() 

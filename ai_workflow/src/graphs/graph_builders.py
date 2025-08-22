@@ -63,8 +63,17 @@ graph.add_conditional_edges(
     }
 )
 
+graph.add_conditional_edges(
+    'summarizer',
+    router_from_summarizer_to_second_name_querier_or_chunk_updater,
+    {
+        'second_name_querier': 'second_name_querier',
+        'chunk_updater': 'chunk_updater',
+    }
+)
 
-graph.add_edge('summarizer', 'second_name_querier')
+
+#graph.add_edge('summarizer', 'second_name_querier')
 
 graph.add_edge('second_name_querier', 'profile_retriever_creator')
 
