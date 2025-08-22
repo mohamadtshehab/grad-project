@@ -7,7 +7,7 @@ from ai_workflow.src.graphs.subgraphs.analyst.graph_builders import analyst_grap
 from ai_workflow.src.schemas.states import create_initial_state
 from ai_workflow.src.configs import GRAPH_CONFIG
 from ai_workflow.src.graphs.graph_visulaizers import visualize_graph
-from ai_workflow.src.databases.django_adapter import get_character_adapter
+from characters.models import Character
 import uuid
 import traceback
 from pathlib import Path
@@ -84,15 +84,8 @@ class Command(BaseCommand):
             self.stdout.write('Clearing existing characters...')
             try:
                 Chunk.objects.filter(book=book_id).delete()
-                adapter = get_character_adapter(book_id)
-                adapter.clear_database()
-                self.stdout.write(self.style.SUCCESS('Existing characters cleared!'))
-            except ImportError as e:
-                self.stdout.write(self.style.ERROR(f'Failed to clear characters - Missing module: {e}'))
-                return
-            except AttributeError as e:
-                self.stdout.write(self.style.ERROR(f'Failed to clear characters - Method not found: {e}'))
-                return
+                Character.objects.filter(book=book_id).delete()
+                self.stdout.write(self.style.SUCCESS('Existing characters and chunks cleared!'))
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Failed to clear characters - Database error: {e}'))
                 if options.get('debug') or self.verbosity >= 2:
