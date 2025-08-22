@@ -6,7 +6,7 @@ from .models import Book
 class BookAdmin(admin.ModelAdmin):
     """Admin configuration for Book model"""
     
-    list_display = ['title', 'author', 'user_id', 'created_at', 'is_deleted']
+    list_display = ['title', 'author', 'user', 'created_at', 'is_deleted']
     list_filter = ['is_deleted', 'created_at', 'author']
     search_fields = ['title', 'author', 'description']
     ordering = ['-created_at']
@@ -14,7 +14,7 @@ class BookAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (None, {
-            'fields': ('book_id', 'title', 'author', 'description', 'user_id')
+            'fields': ('book_id', 'title', 'author', 'description', 'user')
         }),
         ('File Information', {
             'fields': ('file', 'file_size', 'file_extension')
