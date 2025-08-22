@@ -117,7 +117,7 @@ class BookUploadSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create book instance with user"""
         # Add user from context
-        validated_data['user_id'] = self.context['request'].user
+        validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
 
 
@@ -131,3 +131,6 @@ class BookStatusSerializer(serializers.ModelSerializer):
             'processing_error', 'updated_at'
         ]
         read_only_fields = ['book_id', 'title', 'processing_status', 'processing_error', 'updated_at']
+
+
+

@@ -10,6 +10,7 @@ urlpatterns = [
     path('__debug__/', include('debug_toolbar.urls')),
     path('api/auth/', include('authentication.urls')),
     path('api/books/', include('books.urls')),
+    path('api/chunks/', include('chunks.urls')),
     path('api/', include('utils.urls')),
 ]
 

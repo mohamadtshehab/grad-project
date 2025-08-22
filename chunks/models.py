@@ -9,10 +9,10 @@ class Chunk(models.Model):
     """
     chunk_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     chunk_text = models.TextField(help_text="The actual text content of the chunk")
-    chunk_number = models.PositiveIntegerField(help_text="Sequential number of the chunk within the book")
+    chunk_number = models.IntegerField(help_text="Sequential number of the chunk within the book")
     
     # Foreign key to Book
-    book_id = models.ForeignKey(
+    book = models.ForeignKey(
         Book,
         on_delete=models.CASCADE,
         related_name='chunks',
@@ -41,22 +41,17 @@ class Chunk(models.Model):
     
     class Meta:
         db_table = 'chunk'
-        ordering = ['book_id', 'chunk_number']
-        unique_together = ['book_id', 'chunk_number']
+        ordering = ['book', 'chunk_number']
+        unique_together = ['book', 'chunk_number']
         indexes = [
-            models.Index(fields=['book_id']),
-            models.Index(fields=['book_id', 'chunk_number']),
+            models.Index(fields=['book']),
+            models.Index(fields=['book', 'chunk_number']),
             models.Index(fields=['chunk_number']),
         ]
     
     def __str__(self):
-        return f"Chunk {self.chunk_number} of {self.book_id.title}"
-    
-    @property
-    def character_count(self):
-        """Get character count of the chunk"""
-        return len(self.chunk_text) if self.chunk_text else 0
-    
+        return f"Chunk {self.chunk_number} of {self.book.title}"
+        
     def get_preview(self, length=100):
         """Get a preview of the chunk text"""
         if not self.chunk_text:

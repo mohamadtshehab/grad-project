@@ -1,4 +1,5 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.utils import timezone
 
 
 class UserNotificationsConsumer(AsyncJsonWebsocketConsumer):
@@ -27,13 +28,15 @@ class UserNotificationsConsumer(AsyncJsonWebsocketConsumer):
 			await self.channel_layer.group_discard(group, self.channel_name)
 
 	async def job_update(self, event):
-		print(f"📨 Consumer received job_update event: {event}")
-		await self.send_json(event)
-		print(f"✅ Event sent to WebSocket client")
+		"""Handle job update events."""
+		print(f"📨 Consumer received job update event: {event}")
+		
+		# Remove the 'type' field added by Django Channels before sending to client
+		event_data = {k: v for k, v in event.items() if k != 'type'}
+		
+		await self.send_json(event_data)
+		print(f"✅ Standardized event sent to WebSocket client")
 
-	async def job_progress(self, event):
-		await self.send_json(event)
-	
 	async def receive_json(self, content):
 		"""Handle incoming messages from client"""
 		print(f"📨 Received message: {content}")
@@ -42,7 +45,7 @@ class UserNotificationsConsumer(AsyncJsonWebsocketConsumer):
 		await self.send_json({
 			"type": "echo",
 			"message": f"Echo: {content.get('message', 'No message')}",
-			"timestamp": "now"
+			"timestamp": timezone.now().isoformat()
 		})
 
 
