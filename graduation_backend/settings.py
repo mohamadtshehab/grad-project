@@ -17,6 +17,13 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+# Debug Toolbar configuration
+INTERNAL_IPS = [
+    '127.0.0.1',
+    'localhost',
+    '0.0.0.0',
+]
+
 # Application definition
 DJANGO_APPS = [
     'django.contrib.admin',
@@ -33,8 +40,8 @@ THIRD_PARTY_APPS = [
     'corsheaders',
     'django_filters',
     'channels',
-    'debug_toolbar',
     'drf_yasg',
+    'debug_toolbar',
 ]
 
 LOCAL_APPS = [
@@ -114,8 +121,10 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
