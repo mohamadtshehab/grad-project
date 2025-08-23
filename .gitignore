@@ -36,3 +36,5 @@ htmlcov/
 logs/
 
 ai_workflow/resources/texts
+
+graduation_backend\settings.py
