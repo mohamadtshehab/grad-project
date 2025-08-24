@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/auth/', include('authentication.urls')),
     path('api/books/', include('books.urls')),
     path('api/chunks/', include('chunks.urls')),
+    path('api/characters/', include('characters.urls')),
     path('api/', include('utils.urls')),
 ]
 
