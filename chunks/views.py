@@ -8,11 +8,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
-from django.db.models import Sum
+from django.db.models import Sum, Q
+from django.http import Http404
 from chunks.models import Chunk
 from chunks.serializers import ChunkSerializer
 from books.models import Book
-from characters.models import ChunkCharacter
+from characters.models import ChunkCharacter, Character, CharacterRelationship
 from characters.serializers import ChunkCharacterSerializer
 import uuid
 
@@ -88,8 +89,27 @@ class ChunkViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"error": "Search query 'q' must be at least 3 characters."}, status=status.HTTP_400_BAD_REQUEST)
 
         queryset = self.get_queryset().filter(chunk_text__icontains=query)
-        # ... (pagination logic is fine) ...
-        return Response(...)
+        
+        # Apply pagination
+        page_size = min(int(request.query_params.get('page_size', 10)), 100)
+        paginator = Paginator(queryset, page_size)
+        page_number = int(request.query_params.get('page', 1))
+        
+        try:
+            page_obj = paginator.page(page_number)
+        except:
+            return Response({"error": "Invalid page number."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        serializer = self.get_serializer(page_obj, many=True)
+        
+        return Response({
+            "chunks": serializer.data,
+            "pagination": {
+                "current_page": page_obj.number,
+                "total_pages": paginator.num_pages,
+                "total_chunks": paginator.count,
+            }
+        })
     
 
 
@@ -122,3 +142,81 @@ def chunk_characters(request, chunk_id: str):
         'characters': serializer.data,
         'count': mentions.count(),
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def chunk_relationships(request, chunk_id: str):
+    """
+    Get all relationships for characters mentioned in a single chunk.
+    
+    Returns a list of relationships between characters that appear in the specified chunk.
+    """
+    try:
+        # Validate chunk_id format
+        chunk_uuid = uuid.UUID(chunk_id)
+    except ValueError:
+        return Response({"error": "Invalid chunk_id format"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Get the chunk and verify user access
+        chunk = get_object_or_404(
+            Chunk.objects.select_related('book'),
+            pk=chunk_uuid, 
+            book__user=request.user
+        )
+        
+        # Get all characters mentioned in this chunk
+        chunk_characters = ChunkCharacter.objects.filter(chunk=chunk).values_list('character_id', flat=True)
+        
+        if not chunk_characters:
+            return Response({
+                'chunk_id': str(chunk.pk),
+                'book_id': str(chunk.book.pk),
+                'relationships': [],
+                'total_relationships': 0,
+                'message': 'No characters found in this chunk'
+            }, status=status.HTTP_200_OK)
+        
+        # Get all relationships between characters in this chunk
+        relationships = CharacterRelationship.objects.filter(
+            book=chunk.book
+        ).filter(
+            # Both characters must be in the chunk
+            Q(from_character_id__in=chunk_characters) & 
+            Q(to_character_id__in=chunk_characters)
+        ).select_related(
+            'from_character', 
+            'to_character'
+        ).order_by('created_at')
+        
+        # Create simplified relationship data
+        simplified_relationships = []
+        for relationship in relationships:
+            simplified_relationships.append({
+                'from_character_name': relationship.from_character.name,
+                'from_character_id': str(relationship.from_character.character_id),
+                'to_character_name': relationship.to_character.name,
+                'to_character_id': str(relationship.to_character.character_id),
+                'relationship_type': relationship.relationship_type,
+                'description': relationship.description
+            })
+        
+        return Response({
+            'chunk_id': str(chunk.pk),
+            'book_id': str(chunk.book.pk),
+            'relationships': simplified_relationships,
+            'total_relationships': len(simplified_relationships),
+            'characters_in_chunk': list(chunk_characters)
+        }, status=status.HTTP_200_OK)
+        
+    except Http404:
+        return Response({
+            'error': 'Chunk not found',
+            'details': f'No chunk found with ID: {chunk_id}'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'error': 'Failed to retrieve chunk relationships',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
