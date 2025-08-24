@@ -124,12 +124,12 @@ def create_preprocessing_complete_event(
     )
 
 
-def create_chunk_ready_event(chunk_number: int) -> WebSocketEvent:
+def create_chunk_ready_event(chunk_number: int, chunk_id: str) -> WebSocketEvent:
     """Create a chunk ready event."""
     return WebSocketEvent(
         event_type="chunk_ready",
         status="success",
-        data={"chunk_number": chunk_number}
+        data={"chunk_number": chunk_number, "chunk_id": chunk_id}
     )
 
 
