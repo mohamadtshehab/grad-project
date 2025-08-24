@@ -56,7 +56,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"[DRY RUN] Would stop run: {run_id}")
                 return
             
-            client.update_run(run_id=run_id, status="aborted")
+            client.update_run(run_id=run_id, status="error")
             self.stdout.write(
                 self.style.SUCCESS(f"Successfully stopped run: {run_id}")
             )
@@ -94,7 +94,7 @@ class Command(BaseCommand):
             for run in runs:
                 try:
                     self.stdout.write(f"Stopping run {run.id}...")
-                    client.update_run(run_id=str(run.id), status="aborted")
+                    client.update_run(run_id=str(run.id), status="error")
                     self.stdout.write(
                         self.style.SUCCESS(f"  ✓ Run {run.id} stopped")
                     )

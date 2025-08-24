@@ -129,8 +129,15 @@ def chunk_updater(state: State) -> Dict[str, Any]:
     
     # Send chunk ready event
     if 'progress_callback' in state:
-        chunk_ready_event = create_chunk_ready_event(
+        # Get the chunk_id from the database using book_id and chunk_num
+        chunk_id = ChunkDBService.get_chunk_id_by_book_and_number(
+            book_id=state['book_id'],
             chunk_number=state['chunk_num']
+        )
+            
+        chunk_ready_event = create_chunk_ready_event(
+            chunk_number=state['chunk_num'],  # Current chunk that was just processed
+            chunk_id=chunk_id
         )
         state['progress_callback'](chunk_ready_event)
         logger.info(f"Progress event sent for chunk {state['chunk_num']}")
