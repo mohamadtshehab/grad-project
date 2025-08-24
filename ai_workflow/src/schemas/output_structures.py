@@ -1,50 +1,43 @@
 from pydantic import BaseModel, Field
 from typing import List
+from typing import List, Optional
 
 class NameList(BaseModel):
     """Use this schema to format the character list output."""
     names: List[str] = Field(description="قائمة باسماء الشخصيات الموجودة في النص")
 
 class Profile(BaseModel):
-    """Single profile data for a character."""
     
-    name: str = Field(
-        description="اسم الشخصية كما هو مذكور في البروفايل المعطى؛ لا يتم تغييره"
+    name: str = Field(description="اسم الشخصية كما هو مذكور في البروفايل المعطى؛ لا يتم تغييره")
+
+    age: Optional[str] = Field(
+        default=None,
+        description="العمر التقديري أو الوصف الدال عليه إذا تغير أو أضيف، اتركه None إذا لم يرد جديد"
+    )
+    role: Optional[str] = Field(
+        default=None,
+        description="الدور الجديد فقط إذا تغير. استخدم أداة character_role_classifier للتحقق من التغيير قبل الدمج"
     )
     
-    age: str = Field(
-        default="",
-        description="العمر التقديري أو الوصف الدال عليه إن وُجد في النص؛ إذا لم يكن واضحًا، تبقى القيمة كما هي"
-    )
-    
-    role: str = Field(
-        default="",
-        description="الدور الذي تلعبه الشخصية في النص (رئيسية، ثانوية، راوية، إلخ) إذا توفر في النص"
-    )
-    
-    physical_characteristics: List[str] = Field(
+    physical_characteristics: Optional[List[str]] = Field(
         default_factory=list,
-        description="الصفات الجسدية التي وُصفت بها الشخصية بشكل صريح أو ضمني، بصيغة قائمة من النصوص"
+        description="الصفات الجسدية الجديدة فقط. اترك القائمة فارغة [] إذا لا يوجد جديد"
     )
-    
-    personality: str = Field(
-        default="",
-        description="الصفات النفسية أو السلوكية التي ظهرت في النص بوضوح أو تلميح"
-    )
-    
-    events: List[str] = Field(
+    personality: Optional[List[str]] = Field(
         default_factory=list,
-        description="قائمة بالأحداث المحورية والمهمة التي أثّرت على تطور الشخصية أو القصة؛ يتم تجاهل الأحداث التفصيلية أو العادية"
+        description="الصفات النفسية الجديدة فقط. اترك القائمة فارغة [] إذا لا يوجد جديد"
     )
-    
-    relations: List[str] = Field(
+    events: Optional[List[str]] = Field(
         default_factory=list,
-        description="قائمة بالعلاقات مع الشخصيات الأخرى بصيغة 'اسم_الشخصية: نوع_العلاقة' مثل 'سليم: صداقة'"
+        description="الأحداث الجديدة فقط، إذا لم يوجد جديد اترك القائمة فارغة []"
     )
-    
-    aliases: List[str] = Field(
+    relations: Optional[List[str]] = Field(
         default_factory=list,
-        description="قائمة بالأسماء أو الألقاب الأخرى التي يُشار بها إلى الشخصية في النص"
+        description='العلاقات الجديدة فقط مع الشخصيات الأخرى بصيغة "اسم_الشخصية: نوع_العلاقة". اترك القائمة [] إذا لا يوجد جديد'
+    )
+    aliases: Optional[List[str]] = Field(
+        default_factory=list,
+        description="الأسماء أو الألقاب الجديدة فقط. اترك القائمة [] إذا لا يوجد جديد"
     )
 
 

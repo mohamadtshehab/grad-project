@@ -50,4 +50,5 @@ dependencies = [
     "ebooklib>=0.19",
     "flower>=2.0.1",
     "langgraph-cli>=0.3.6",
+    "cohere>=5.17.0",
 ]
