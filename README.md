@@ -6,6 +6,9 @@ A robust Django REST API backend with authentication, admin panel, customer mana
 
 - **🔐 JWT Authentication** - Secure token-based authentication system
 - **👥 User Management** - Custom user model with role-based permissions
+- **📚 Book Management** - Complete book processing and analysis system
+- **👤 Character Analysis** - AI-powered character extraction and relationship mapping
+- **🔗 Character Relationships** - API endpoints for character relationship queries
 - **📧 Email Integration** - Gmail API integration for automated emails
 - **⚡ Real-time Notifications** - WebSocket support with Django Channels
 - **🔄 Background Tasks** - Celery integration for async task processing
