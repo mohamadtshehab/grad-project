@@ -4,9 +4,6 @@ import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Q, F
-
-# It's good practice to import related models from their respective apps.
-# Ensure these models exist in the specified apps.
 from books.models import Book
 from chunks.models import Chunk
 
@@ -24,7 +21,7 @@ class Character(models.Model):
     )
     
     # The custom encoder is removed as Django's JSONField handles Unicode well.
-    character_data = models.JSONField(
+    profile = models.JSONField(
         help_text="Flexible JSON data for the character's profile (e.g., name, age, personality)."
     )
     
@@ -48,13 +45,13 @@ class Character(models.Model):
     
     def __str__(self):
         """Returns a human-readable representation of the character."""
-        name = self.character_data.get('name', 'Unknown Character')
+        name = self.profile.get('name', 'Unknown Character')
         return f"{name} in '{self.book.title}'"
     
     @property
     def name(self):
         """A convenient property to access the character's name from the JSON data."""
-        return self.character_data.get('name', '') if self.character_data else ''
+        return self.profile.get('name', '') if self.profile else ''
 
 
 class ChunkCharacter(models.Model):

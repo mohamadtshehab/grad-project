@@ -298,7 +298,7 @@ graduation_backend/
 │ ChunkCharacter  │    │   Character     │
 │─────────────────│    │─────────────────│
 │ chunk_id FK     │    │ character_id    │
-│ character_id FK │    │ character_data  │
+│ character_id FK │    │ profile  │
 │ mention_count   │    │ (JSON)          │
 │ position_info   │    │ book_id FK      │
 │ (JSON)          │    │ created_at      │
@@ -401,7 +401,7 @@ def epub_to_raw_html_string(epub_path):
 ```python
 class Character(models.Model):
     character_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
-    character_data = models.JSONField(encoder=UnicodeJSONEncoder)
+    profile = models.JSONField(encoder=UnicodeJSONEncoder)
     book_id = models.ForeignKey(Book, on_delete=models.CASCADE)
     
     # Character data JSON structure:
@@ -648,11 +648,11 @@ class DjangoCharacterAdapter:
         self.book_id = book_id
         self.book = Book.objects.get(book_id=book_id)
     
-    def insert_character(self, character_data: dict) -> str:
+    def insert_character(self, profile: dict) -> str:
         """Insert new character into database"""
         character = Character.objects.create(
             book_id=self.book,
-            character_data=character_data
+            profile=profile
         )
         return str(character.character_id)
     
@@ -669,7 +669,7 @@ class DjangoCharacterAdapter:
         else:
             characters = Character.objects.filter(
                 book_id=self.book,
-                character_data__name__icontains=name
+                profile__name__icontains=name
             )
         return [char.to_dict() for char in characters]
 ```
@@ -792,7 +792,7 @@ CREATE INDEX idx_chunk_number ON chunk(chunk_number);
 
 CREATE TABLE character (
     character_id VARCHAR(36) PRIMARY KEY, -- UUID
-    character_data JSON NOT NULL,         -- Flexible character profile
+    profile JSON NOT NULL,         -- Flexible character profile
     book_id VARCHAR(36) NOT NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,

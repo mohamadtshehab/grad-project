@@ -14,7 +14,7 @@ class CharacterSerializer(serializers.ModelSerializer):
         fields = [
             'character_id',
             'name',
-            'character_data',
+            'profile',
             'created_at',
             'updated_at',
         ]
@@ -26,7 +26,7 @@ class CharacterForMentionSerializer(serializers.ModelSerializer):
     """A simplified Character serializer for nesting."""
     class Meta:
         model = Character
-        fields = ['character_id', 'character_data']
+        fields = ['character_id', 'profile']
 
 class ChunkCharacterSerializer(serializers.ModelSerializer):
     """Serializer for a character mention within a chunk."""
