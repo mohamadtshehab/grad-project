@@ -5,6 +5,7 @@ from utils.websocket_events import create_chunk_ready_event
 from characters.models import Character as CharacterModel, CharacterRelationship, ChunkCharacter
 from books.models import Book
 from chunks.models import Chunk
+from ai_workflow.src.services.db_services import ChunkDBService
 import os
 import sys
 import django
@@ -167,8 +168,15 @@ def chunk_updater(state: State):
     
     # Send chunk ready event using standardized structure
     if 'progress_callback' in state:
+        # Get the chunk_id from the database using book_id and chunk_num
+        chunk_id = ChunkDBService.get_chunk_id_by_book_and_number(
+            book_id=state['book_id'],
+            chunk_number=state['chunk_num']
+        )
+            
         chunk_ready_event = create_chunk_ready_event(
-            chunk_number=state['chunk_num']  # Current chunk that was just processed
+            chunk_number=state['chunk_num'],  # Current chunk that was just processed
+            chunk_id=chunk_id
         )
         state['progress_callback'](chunk_ready_event)
     
