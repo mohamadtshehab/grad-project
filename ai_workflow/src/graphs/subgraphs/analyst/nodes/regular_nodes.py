@@ -8,6 +8,16 @@ from chunks.models import Chunk
 import os
 import sys
 import django
+import re
+import unicodedata
+import numpy as np
+from django.db import transaction
+from books.models import Book
+import cohere
+import json
+
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+cohere_client = cohere.Client(COHERE_API_KEY)
 
 # Setup Django environment if not already configured
 def setup_django():
@@ -45,6 +55,7 @@ def first_name_querier(state: State):
         'last_appearing_names': characters
     } 
     
+
 def second_name_querier(state: State):
     """
     Node that queries the name of the character in the last summary.
@@ -65,99 +76,233 @@ def second_name_querier(state: State):
 
 def profile_retriever_creator(state: State):
     """
-    Node that creates a new profile or retrieves an existing one.
-    Uses last_appearing_names to retrieve profiles from Django Character models.
-    If no character exists, creates a new entry with that name, keeping other profile data null.    
+    Node that retrieves existing profiles from Django Character models.
+    Uses last_appearing_names to fetch profiles.
+    Does not create new characters if not found.
+    Stores chunk-character relationships in the database.
     """
-    last_appearing_names = state['last_appearing_names']
+    last_appearing_names = state.get('last_appearing_names') or []
     book_id = state.get('book_id')
-    
+
     # Get the book instance
     book = Book.objects.get(book_id=book_id)
-    
-    characters = []
-    
+
+    characters_by_name = {}
+
+    print("=== Retrieving profiles for appearing characters ===")
     for character_name in last_appearing_names:
-        
         name = character_name if isinstance(character_name, str) else str(character_name)
-        
+
         # Find existing characters by name using Django ORM directly
         existing_characters = CharacterModel.objects.filter(
             book=book,
             character_data__name__icontains=name
         )
-        
+
+        profiles_list = []
         if existing_characters.exists():
             for char in existing_characters:
-                characters.append(Character(
-                    id=str(char.character_id),
-                    profile=Profile(**char.character_data)
-                ))
-            
-        else:
-            new_profile = Profile(name=name)
-            
-            profile_dict = new_profile.model_dump()
-            
-            # Create new character directly with Django ORM
-            new_character = CharacterModel.objects.create(
-                book=book,
-                character_data=profile_dict
-            )
-            
-            # Create Character object with the new profile
-            characters.append(Character(
-                id=str(new_character.character_id),
-                profile=new_profile
-            ))
-    
-    
-    # Store chunk-character relationships
+                profiles_list.append(
+                    Character(
+                        id=str(char.character_id),
+                        profile=Profile(**char.character_data)
+                    )
+                )
+
+        characters_by_name[name] = profiles_list
+        print(json.dumps({name: [p.id for p in profiles_list]}, ensure_ascii=False))
+
+    # Store chunk-character relationships (only for existing characters)
     _store_chunk_character_relationships(book, state['chunk_num'], last_appearing_names)
-    
-    return {'last_profiles': characters}
+
+    print("=== Final mapping (name -> profiles) ===")
+    print(json.dumps(
+        {name: [p.id for p in profiles] for name, profiles in characters_by_name.items()},
+        ensure_ascii=False,
+        indent=2
+    ))
+
+    return {'last_profiles_by_name': characters_by_name}
 
 
-def profile_refresher(state: State):
-    """
-    Node that refreshes the profiles based on the current chunk.
-    """
+def get_embedding(text: str) -> np.ndarray:
+    response = cohere_client.embed(model="small", texts=[text])
+    return np.array(response.embeddings[0])
+
+def profile_to_text(profile) -> str:
+    return f"{profile.name} | {profile.role or ''} | events: {', '.join(profile.events)} | " \
+           f"relations: {', '.join(profile.relations)} | personality: {', '.join(profile.personality)} | " \
+           f"aliases: {', '.join(profile.aliases)}"
+
+def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
+    return np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2) + 1e-10)
+
+_HONORIFICS_REGEX = re.compile(
+    r"^(?:ال)?(?:(?:شيخ)|(?:السيد)|(?:سيد)|(?:معلم)|(?:الحاج)|(?:الحاجة)|"
+    r"(?:الدكتور)|(?:دكتور)|(?:د\.)|(?:الأستاذ)|(?:الاستاذ)|(?:استاذ))\s+"
+)
+
+def _remove_diacritics(s: str) -> str:
+    s = s.replace("ـ", "")
+    return "".join(ch for ch in unicodedata.normalize("NFD", s) if unicodedata.category(ch) != "Mn")
+
+def normalize_key(name: str) -> str:
+    if not name:
+        return ""
+    name = str(name).strip().lower()
+    name = _remove_diacritics(name)
+    name = _HONORIFICS_REGEX.sub("", name)
+    name = name.replace(" ", "")
+    return name
+
+def safe_str(value):
+    if value is None or (isinstance(value, str) and value.strip().lower() in ["none", "null"]):
+        return ""
+    return value.strip() if isinstance(value, str) else str(value)
+
+def safe_list(value):
+    if value is None:
+        return []
+    return value if isinstance(value, list) else []
+
+def merge_list(old_list, new_list):
+    old_list = safe_list(old_list)
+    new_list = safe_list(new_list)
+    return list(set(old_list + new_list)) if new_list else old_list
+
+def merge_relations(old_list, new_list):
+    old_list = safe_list(old_list)
+    new_list = safe_list(new_list)
+    merged = {}
+    for rel in old_list + new_list:
+        if ":" in rel:
+            name, relation = map(str.strip, rel.split(":", 1))
+            merged[name] = relation
+    return [f"{n}: {r}" for n, r in merged.items()]
+
+
+def profile_refresher(state, similarity_threshold: float = 0.9):
+    last_profiles_by_name = state.get("last_profiles_by_name") or {}
+    last_summary = str(state.get("last_summary") or "")
+    book_id = state.get("book_id")
+    list_of_character_name = state.get("last_appearing_names") or []
+
+    updated_by_name = {name: profiles[:] for name, profiles in last_profiles_by_name.items()}
+    flat_profiles = [ch for profiles in updated_by_name.values() for ch in profiles]
+
     chain_input = {
-        "text": str(state['last_summary']),
-        "profiles": str([char.profile for char in state['last_profiles']])
+        "text": last_summary,
+        "profiles": [ch.profile.model_dump() for ch in flat_profiles],
+        "list_of_character_name": list_of_character_name,
     }
+    
     response = profile_difference_chain.invoke(chain_input)
-    
-    # Get the book instance
-    book_id = state.get('book_id')
+    if not response or not hasattr(response, "profiles"):
+        return {"last_profiles_by_name": updated_by_name}
+
+    embeddings_cache_by_key = {}
+    for key_name, profiles_list in updated_by_name.items():
+        embeddings_cache_by_key[key_name] = {}
+        for ch in profiles_list:
+            embeddings_cache_by_key[key_name][ch.id] = get_embedding(profile_to_text(ch.profile))
+
     book = Book.objects.get(book_id=book_id)
-    
-    # Update database with new profile data using Django ORM directly
     updated_characters = []
-    for i, profile in enumerate(response.profiles):
-        # Get the existing character ID
-        existing_character = state['last_profiles'][i]
-        
-        
-        profile_dict = profile.model_dump()
-        
-        # Update the database using Django ORM directly
-        character = CharacterModel.objects.get(character_id=existing_character.id)
-        character.character_data = profile_dict
-        character.save()
-        
-        # Create updated Character object
-        updated_characters.append(Character(
-            id=existing_character.id,
-            profile=profile
-        ))
-        
-    # Store character relationships from updated profiles
-    _store_character_relationships(book, response.profiles)
-    
-    return {
-        'last_profiles': updated_characters,
-    }
+
+    with transaction.atomic():
+        for new_profile_data in response.profiles:
+            model_name_raw = safe_str(new_profile_data.name)
+            model_key_norm = normalize_key(model_name_raw)
+
+            matched_key = None
+            for key_name in updated_by_name.keys():
+                if normalize_key(key_name) == model_key_norm:
+                    matched_key = key_name
+                    break
+
+            if matched_key is None:
+                matched_key = model_name_raw
+                if matched_key not in updated_by_name:
+                    updated_by_name[matched_key] = []
+                    embeddings_cache_by_key[matched_key] = {}
+
+            profiles_list = updated_by_name.get(matched_key, [])
+            matched_profile = None
+            new_name_norm = normalize_key(model_name_raw)
+
+            for existing_char in profiles_list:
+                names_to_check = [existing_char.profile.name] + safe_list(existing_char.profile.aliases)
+                names_norm = [normalize_key(n) for n in names_to_check]
+                if new_name_norm in names_norm:
+                    matched_profile = existing_char
+                    break
+
+            if matched_profile is None and profiles_list:
+                new_emb = get_embedding(profile_to_text(new_profile_data))
+                best_match = None
+                best_sim = 0.0
+                for existing_char in profiles_list:
+                    existing_emb = embeddings_cache_by_key[matched_key].get(existing_char.id)
+                    if existing_emb is None:
+                        existing_emb = get_embedding(profile_to_text(existing_char.profile))
+                        embeddings_cache_by_key[matched_key][existing_char.id] = existing_emb
+                    sim = cosine_similarity(new_emb, existing_emb)
+                    if sim > best_sim:
+                        best_sim = sim
+                        best_match = existing_char
+                if best_match is not None and best_sim >= similarity_threshold:
+                    matched_profile = best_match
+
+            if matched_profile is not None:
+                existing_char = matched_profile
+                merged_profile = Profile(
+                    name=safe_str(existing_char.profile.name),
+                    age=safe_str(new_profile_data.age or existing_char.profile.age),
+                    role=safe_str(new_profile_data.role or existing_char.profile.role),
+                    events=merge_list(existing_char.profile.events, new_profile_data.events),
+                    relations=merge_relations(existing_char.profile.relations, new_profile_data.relations),
+                    aliases=merge_list(
+                        existing_char.profile.aliases,
+                        [model_name_raw] if model_name_raw != existing_char.profile.name else []
+                    ),
+                    physical_characteristics=merge_list(
+                        existing_char.profile.physical_characteristics,
+                        new_profile_data.physical_characteristics
+                    ),
+                    personality=merge_list(
+                        existing_char.profile.personality,
+                        new_profile_data.personality
+                    ),
+                )
+                character = Character.objects.get(character_id=existing_char.id)
+                character.character_data = merged_profile.model_dump()
+                character.save()
+                profiles_list[profiles_list.index(existing_char)] = Character(id=existing_char.id, profile=merged_profile)
+
+            else:
+                merged_profile = Profile(
+                    name=safe_str(model_name_raw),
+                    age=safe_str(new_profile_data.age),
+                    role=safe_str(new_profile_data.role),
+                    events=safe_list(new_profile_data.events),
+                    relations=safe_list(new_profile_data.relations),
+                    aliases=safe_list(new_profile_data.aliases),
+                    physical_characteristics=safe_list(new_profile_data.physical_characteristics),
+                    personality=safe_list(new_profile_data.personality),
+                )
+                character = Character.objects.create(
+                    book=book,
+                    character_data=merged_profile.model_dump()
+                )
+                profiles_list.append(character)
+                embeddings_cache_by_key[matched_key][character.character_id] = get_embedding(profile_to_text(merged_profile))
+
+            updated_by_name[matched_key] = profiles_list
+
+        _store_character_relationships(book, [ch.profile for plist in updated_by_name.values() for ch in plist])
+
+    return {"last_profiles_by_name": updated_by_name}
+
 
 def chunk_updater(state: State):
     """
