@@ -68,15 +68,15 @@ class Command(BaseCommand):
             except ImportError as e:
                 self.stdout.write(self.style.ERROR(f'Failed to generate visualizations - Missing dependency: {e}'))
                 self.stdout.write(self.style.WARNING('Install required visualization packages: pip install graphviz'))
-                if options.get('debug') or self.verbosity >= 2:
+                if options.get('debug') or options.get('verbosity', 1) >= 2:
                     self.stdout.write(f'Full traceback: {traceback.format_exc()}')
             except FileNotFoundError as e:
                 self.stdout.write(self.style.ERROR(f'Failed to generate visualizations - File not found: {e}'))
-                if options.get('debug') or self.verbosity >= 2:
+                if options.get('debug') or options.get('verbosity', 1) >= 2:
                     self.stdout.write(f'Full traceback: {traceback.format_exc()}')
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Failed to generate visualizations - Unexpected error: {e}'))
-                if options.get('debug') or self.verbosity >= 2:
+                if options.get('debug') or options.get('verbosity', 1) >= 2:
                     self.stdout.write(f'Full traceback: {traceback.format_exc()}')
 
         # Clear existing characters if requested
@@ -128,7 +128,7 @@ class Command(BaseCommand):
             error_msg = f'Missing required module or dependency: {e}'
             self.stdout.write(self.style.ERROR(error_msg))
             self.stdout.write(self.style.WARNING('Please ensure all required packages are installed.'))
-            if options.get('debug') or self.verbosity >= 2:
+            if options.get('debug') or options.get('verbosity', 1) >= 2:
                 self.stdout.write('Full traceback:')
                 self.stdout.write(traceback.format_exc())
             raise CommandError(f'AI workflow execution failed - {error_msg}')
@@ -138,7 +138,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(error_msg))
             if 'objects' in str(e):
                 self.stdout.write(self.style.WARNING('This might be a serialization issue with the state objects.'))
-            if options.get('debug') or self.verbosity >= 2:
+            if options.get('debug') or options.get('verbosity', 1) >= 2:
                 self.stdout.write('Full traceback:')
                 self.stdout.write(traceback.format_exc())
             raise CommandError(f'AI workflow execution failed - {error_msg}')
@@ -147,17 +147,15 @@ class Command(BaseCommand):
             error_msg = f'Missing required configuration key: {e}'
             self.stdout.write(self.style.ERROR(error_msg))
             self.stdout.write(self.style.WARNING('Check GRAPH_CONFIG and state configuration.'))
-            if options.get('debug') or self.verbosity >= 2:
+            if options.get('debug') or options.get('verbosity', 1) >= 2:
                 self.stdout.write('Full traceback:')
                 self.stdout.write(traceback.format_exc())
             raise CommandError(f'AI workflow execution failed - {error_msg}')
         
         except TypeError as e:
             error_msg = f'Type mismatch or invalid arguments: {e}'
-            self.stdout.write(self.style.ERROR(error_msg))
-            if 'objects' in str(e):
-                self.stdout.write(self.style.WARNING('This might be a serialization issue with graph state objects.'))
-            if options.get('debug') or self.verbosity >= 2:
+            self.stdout.write(self.style.WARNING('This might be a serialization issue with graph state objects.'))
+            if options.get('debug') or options.get('verbosity', 1) >= 2:
                 self.stdout.write('Full traceback:')
                 self.stdout.write(traceback.format_exc())
             raise CommandError(f'AI workflow execution failed - {error_msg}')
@@ -171,7 +169,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING('This appears to be a serialization/deserialization issue.'))
                 self.stdout.write(self.style.WARNING('Check that all state objects are properly serializable.'))
             
-            if options.get('debug') or self.verbosity >= 2:
+            if options.get('debug') or options.get('verbosity', 1) >= 2:
                 self.stdout.write('Full traceback:')
                 self.stdout.write(traceback.format_exc())
             else:

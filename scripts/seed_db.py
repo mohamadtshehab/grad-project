@@ -162,7 +162,7 @@ class DatabaseSeeder:
             character_count = random.randint(3, 5)
             for i in range(character_count):
                 template = random.choice(self.character_templates)
-                character_data = {
+                profile = {
                     "name": template["name"] + (f" {i+1}" if i > 0 else ""),
                     "age": str(random.randint(20, 60)),
                     "role": template["role"],
@@ -170,7 +170,7 @@ class DatabaseSeeder:
                 }
                 character = Character.objects.create(
                     book=book,
-                    character_data=character_data
+                    profile=profile
                 )
                 self.characters.append(character)
         print(f"✅ Created {len(self.characters)} characters!")
@@ -251,7 +251,7 @@ class DatabaseSeeder:
         
         sample_character = Character.objects.first()
         if sample_character:
-            print(f"📋 Sample Character: {sample_character.name} - {sample_character.character_data.get('role', 'Unknown')}")
+            print(f"📋 Sample Character: {sample_character.name} - {sample_character.profile.get('role', 'Unknown')}")
         
         print("\n🎉 Database seeding completed successfully!")
 
