@@ -29,6 +29,7 @@ safety_settings = {
 }
 
 
+
 profile_difference_llm = ChatGoogleGenerativeAI(model=model, 
                                             temperature=0.0, 
                                             safety_settings=safety_settings,
@@ -38,6 +39,7 @@ name_query_llm = ChatGoogleGenerativeAI(model=model,
                                         temperature=0.0,
                                         safety_settings=safety_settings,
                                         ).with_structured_output(NameList)
+
 
 summary_llm = ChatGoogleGenerativeAI(model=model,
                                      temperature=1.0, 

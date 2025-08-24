@@ -136,7 +136,7 @@ book = Book.objects.get(...)  # Get or create appropriate book
 for char_data in all_characters:
     Character.objects.create(
         book_id=book,
-        character_data=char_data['profile']
+        profile=char_data['profile']
     )
 ```
 

@@ -116,8 +116,10 @@ class DatabaseSeeder:
         """Create test books"""
         print(f"📚 Creating {count} books...")
         book_titles = [
-            "الطريق", "بين القصرين", "قصر الشوق", "السكرية", "أولاد حارتنا", 
-            "الحرافيش", "ملحمة الحرافيش", "الكرنك", "المرايا", "حديث الصباح والمساء"
+            "الطريق", "بين القصرين", "قصر الشوق", "السكرية",
+            "أولاد حارتنا", "الحرافيش", "ملحمة الحرافيش", "الكرنك", "المرايا",
+            "حديث الصباح والمساء", "أصداء السيرة الذاتية", "الباقي من الزمن ساعة",
+            "رحلة ابن فطومة", "ليالي ألف ليلة"
         ]
         authors = ["نجيب محفوظ", "يوسف إدريس", "إحسان عبد القدوس", "توفيق الحكيم", "طه حسين"]
         
@@ -160,7 +162,7 @@ class DatabaseSeeder:
             character_count = random.randint(3, 5)
             for i in range(character_count):
                 template = random.choice(self.character_templates)
-                character_data = {
+                profile = {
                     "name": template["name"] + (f" {i+1}" if i > 0 else ""),
                     "age": str(random.randint(20, 60)),
                     "role": template["role"],
@@ -168,7 +170,7 @@ class DatabaseSeeder:
                 }
                 character = Character.objects.create(
                     book=book,
-                    character_data=character_data
+                    profile=profile
                 )
                 self.characters.append(character)
         print(f"✅ Created {len(self.characters)} characters!")
@@ -249,7 +251,7 @@ class DatabaseSeeder:
         
         sample_character = Character.objects.first()
         if sample_character:
-            print(f"📋 Sample Character: {sample_character.name} - {sample_character.character_data.get('role', 'Unknown')}")
+            print(f"📋 Sample Character: {sample_character.name} - {sample_character.profile.get('role', 'Unknown')}")
         
         print("\n🎉 Database seeding completed successfully!")
 

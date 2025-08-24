@@ -72,7 +72,7 @@ class DjangoCharacterAdapterTestCase(TransactionTestCase):
         # Verify character was created in database
         character = Character.objects.get(character_id=character_id)
         self.assertEqual(character.name, 'أحمد')
-        self.assertEqual(character.character_data['age'], 30)
+        self.assertEqual(character.profile['age'], 30)
         self.assertEqual(character.book_id, self.book)
     
     def test_insert_character_without_name(self):
@@ -107,8 +107,8 @@ class DjangoCharacterAdapterTestCase(TransactionTestCase):
         
         # Verify update in database
         character = Character.objects.get(character_id=character_id)
-        self.assertEqual(character.character_data['age'], 26)
-        self.assertEqual(character.character_data['role'], 'supporting character')
+        self.assertEqual(character.profile['age'], 26)
+        self.assertEqual(character.profile['role'], 'supporting character')
     
     def test_get_character(self):
         """Test retrieving a character by ID."""
