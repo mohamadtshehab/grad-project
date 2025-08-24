@@ -11,9 +11,33 @@ from characters.models import Character as CharacterModel, CharacterRelationship
 from books.models import Book
 from chunks.models import Chunk
 from ai_workflow.src.schemas.output_structures import Profile, Character
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+class ChunkDBService:
+    """Service class for chunk-related database operations."""
+    
+    @staticmethod
+    def get_chunk_id_by_book_and_number(book_id: str, chunk_number: int) -> Optional[str]:
+        """
+        Retrieve a chunk_id by its book_id and chunk_number.
+        
+        Args:
+            book_id: The UUID of the book
+            chunk_number: The sequential number of the chunk within the book
+            
+        Returns:
+            The chunk_id as a string if found, None otherwise
+        """
+        try:
+            chunk = Chunk.objects.get(
+                book_id=book_id,
+                chunk_number=chunk_number
+            )
+            return str(chunk.chunk_id)
+        except Chunk.DoesNotExist:
+            return None
 
 class CharacterDBService:
     """Service class for character database operations."""

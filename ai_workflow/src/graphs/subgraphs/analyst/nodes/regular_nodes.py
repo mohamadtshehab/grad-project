@@ -12,7 +12,7 @@ setup_django()
 from ai_workflow.src.schemas.states import State
 from ai_workflow.src.schemas.output_structures import EmptyProfileValidation, Character
 from ai_workflow.src.services.db_services import (
-    CharacterDBService, ChunkCharacterService, CharacterRelationshipService,
+    CharacterDBService, ChunkCharacterService, CharacterRelationshipService, ChunkDBService,
     django_to_pydantic_character
 )
 from ai_workflow.src.services.ai_services import AIChainService
