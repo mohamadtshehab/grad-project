@@ -13,6 +13,9 @@ class State(TypedDict):
     clean_chunks: list[str]
     progress_callback: Optional[Callable]
     prohibited_content: bool
+    last_profiles_by_name: dict[str, list[Character]] | None   
+    last_appearing_names: list[str] | None 
+    summary_status: str
 
 def create_initial_state(book_id: str, progress_callback: Optional[Callable] = None):
     """
@@ -22,7 +25,7 @@ def create_initial_state(book_id: str, progress_callback: Optional[Callable] = N
         book_id: book ID for character context
         progress_callback: callback function for progress updates
     """
-        
+
     state = {
         'book_id': book_id,
         'no_more_chunks': False,
@@ -31,7 +34,10 @@ def create_initial_state(book_id: str, progress_callback: Optional[Callable] = N
         'num_of_chunks': 0,
         'validation_passed': True,
         'clean_chunks': [],
-        'prohibited_content': False
+        'prohibited_content': False,
+        'last_profiles_by_name': None,   
+        'last_appearing_names': None,
+        'summary_status': ''
         }
     
     # Add callback if provided
