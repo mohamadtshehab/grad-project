@@ -122,7 +122,7 @@ class Command(BaseCommand):
             result = orchestrator_graph.invoke(initial_state, config=GRAPH_CONFIG)
 
             self.stdout.write(self.style.SUCCESS('Workflow completed successfully!'))
-            self.stdout.write(f'Result: {result}')
+            self.stdout.write(f'Result: success')
 
         except ImportError as e:
             error_msg = f'Missing required module or dependency: {e}'
