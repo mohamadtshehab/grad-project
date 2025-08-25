@@ -6,7 +6,13 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q, F
 from books.models import Book
 from chunks.models import Chunk
+import json
 
+class UnicodeJSONEncoder(json.JSONEncoder):
+    def __init__(self, *args, **kwargs):
+        # ensure_ascii=False keeps Unicode characters as-is (not escaped)
+        kwargs['ensure_ascii'] = False
+        super().__init__(*args, **kwargs)
 
 class Character(models.Model):
     """
@@ -22,7 +28,8 @@ class Character(models.Model):
     
     # The custom encoder is removed as Django's JSONField handles Unicode well.
     profile = models.JSONField(
-        help_text="Flexible JSON data for the character's profile (e.g., name, age, personality)."
+        help_text="Flexible JSON data for the character's profile (e.g., name, age, personality).",
+        encoder=UnicodeJSONEncoder
     )
     
     book = models.ForeignKey(
