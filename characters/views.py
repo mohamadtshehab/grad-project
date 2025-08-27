@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.http import Http404
 from characters.models import Character, CharacterRelationship
 from characters.serializers import SimpleCharacterRelationshipSerializer
+from utils.response_utils import StandardResponse
 from django.db import models
 
 
@@ -52,19 +53,25 @@ def character_relationships(request, character_id):
         # Serialize the simplified relationships
         serializer = SimpleCharacterRelationshipSerializer(simplified_relationships, many=True)
         
-        return Response({
-            'character_name': character.name,
-            'relationships': serializer.data,
-            'total_relationships': len(simplified_relationships)
-        }, status=status.HTTP_200_OK)
+        return StandardResponse.success(
+            message_en="Character relationships retrieved successfully",
+            message_ar="تم استرجاع علاقات الشخصية بنجاح",
+            data={
+                'character_name': character.name,
+                'relationships': serializer.data,
+                'total_relationships': len(simplified_relationships)
+            }
+        )
         
     except Http404:
-        return Response({
-            'error': 'Character not found',
-            'details': f'No character found with ID: {character_id}'
-        }, status=status.HTTP_404_NOT_FOUND)
+        return StandardResponse.not_found(
+            message_en="Character not found",
+            message_ar="الشخصية غير موجودة",
+            error_detail=f'No character found with ID: {character_id}'
+        )
     except Exception as e:
-        return Response({
-            'error': 'Failed to retrieve character relationships',
-            'details': str(e)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return StandardResponse.server_error(
+            message_en="Failed to retrieve character relationships",
+            message_ar="فشل في استرجاع علاقات الشخصية",
+            error_detail=str(e)
+        )
