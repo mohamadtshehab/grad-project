@@ -20,11 +20,12 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from .models import PasswordResetCode
 from .tasks import send_password_reset_email, send_welcome_email
+from utils.response_utils import ResponseMixin
 import logging
 
 User = get_user_model()
 
-class RegisterView(APIView):
+class RegisterView(APIView, ResponseMixin):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -39,53 +40,78 @@ class RegisterView(APIView):
             user_name=user.name
         )
         
-        return Response({
-            "status": "success",
-            "en": "User registered successfully",
-            "ar": "تم تسجيل المستخدم بنجاح",
-            "data": ProfileSerializer(user).data,
-        }, status=status.HTTP_201_CREATED)
+        return self.success_response(
+            message_en="User registered successfully",
+            message_ar="تم تسجيل المستخدم بنجاح",
+            data=ProfileSerializer(user).data,
+            status_code=status.HTTP_201_CREATED
+        )
 
 
-class LoginView(TokenObtainPairView):
+class LoginView(TokenObtainPairView, ResponseMixin):
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
 
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        return Response({
-            "status": "success",
-            "en": "Logged in successfully",
-            "ar": "تم تسجيل الدخول بنجاح",
-            "data": response.data,
-        }, status=status.HTTP_200_OK)
+        try:
+            response = super().post(request, *args, **kwargs)
+            return self.success_response(
+                message_en="Logged in successfully",
+                message_ar="تم تسجيل الدخول بنجاح",
+                data=response.data
+            )
+        except Exception as e:
+            # Handle JWT authentication errors and return standardized responses
+            error_message = str(e)
+            
+            # Common JWT authentication error messages
+            if "No active account found with the given credentials" in error_message:
+                return self.error_response(
+                    message_en="Invalid email or password",
+                    message_ar="بريد إلكتروني أو كلمة مرور غير صحيحة",
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    error_detail="Please check your credentials and try again"
+                )
+            elif "User account is disabled" in error_message:
+                return self.error_response(
+                    message_en="Account is disabled",
+                    message_ar="الحساب معطل",
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    error_detail="Your account has been disabled. Please contact support."
+                )
+            else:
+                # Generic authentication error
+                return self.error_response(
+                    message_en="Authentication failed",
+                    message_ar="فشل في المصادقة",
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    error_detail=error_message
+                )
 
 
-class ProfileView(APIView):
+class ProfileView(APIView, ResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({
-            "status": "success",
-            "en": "Profile retrieved successfully",
-            "ar": "تم استرجاع الملف الشخصي بنجاح",
-            "data": ProfileSerializer(request.user).data,
-        })
+        return self.success_response(
+            message_en="Profile retrieved successfully",
+            message_ar="تم استرجاع الملف الشخصي بنجاح",
+            data=ProfileSerializer(request.user).data
+        )
 
     def put(self, request):
         serializer = ProfileSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({
-            "status": "success",
-            "en": "Profile updated successfully",
-            "ar": "تم تحديث الملف الشخصي بنجاح",
-            "data": serializer.data,
-        })
+        return self.success_response(
+            message_en="Profile updated successfully",
+            message_ar="تم تحديث الملف الشخصي بنجاح",
+            data=serializer.data
+        )
 
 
 
-class LogoutView(APIView):
+class LogoutView(APIView, ResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -94,30 +120,30 @@ class LogoutView(APIView):
             # Get the refresh token from the request
             refresh_token = request.data.get("refresh_token")
             if not refresh_token:
-                return Response({
-                    "status": "error",
-                    "en": "Refresh token is required",
-                    "ar": "الرمز المميز للتحديث مطلوب",
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return self.error_response(
+                    message_en="Refresh token is required",
+                    message_ar="الرمز المميز للتحديث مطلوب",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    error_detail="Please provide a valid refresh token"
+                )
                 
             # Create a RefreshToken instance and blacklist it
             token = RefreshToken(refresh_token)
             token.blacklist()
             
-            return Response({
-                "status": "success",
-                "en": "Logged out successfully",
-                "ar": "تم تسجيل الخروج بنجاح",
-            }, status=status.HTTP_200_OK)
+            return self.success_response(
+                message_en="Logged out successfully",
+                message_ar="تم تسجيل الخروج بنجاح"
+            )
         except Exception as e:
-            return Response({
-                "status": "error",
-                "en": "Logout failed",
-                "ar": "فشل في تسجيل الخروج",
-                "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return self.error_response(
+                message_en="Logout failed",
+                message_ar="فشل في تسجيل الخروج",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
 
-class PasswordChangeView(APIView):
+class PasswordChangeView(APIView, ResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -127,23 +153,23 @@ class PasswordChangeView(APIView):
         
         user = request.user
         if not user.check_password(serializer.validated_data['old_password']):
-            return Response({
-                "status": "error",
-                "en": "Current password is incorrect",
-                "ar": "كلمة المرور الحالية غير صحيحة",
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response(
+                message_en="Current password is incorrect",
+                message_ar="كلمة المرور الحالية غير صحيحة",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                error_detail="Please enter your current password correctly"
+            )
         
         user.set_password(serializer.validated_data['new_password'])
         user.save()
         
-        return Response({
-            "status": "success",
-            "en": "Password changed successfully",
-            "ar": "تم تغيير كلمة المرور بنجاح",
-        }, status=status.HTTP_200_OK)
+        return self.success_response(
+            message_en="Password changed successfully",
+            message_ar="تم تغيير كلمة المرور بنجاح"
+        )
 
 
-class PasswordResetRequestView(APIView):
+class PasswordResetRequestView(APIView, ResponseMixin):
     permission_classes = [AllowAny]
     throttle_classes = [PasswordResetThrottle]
 
@@ -173,38 +199,38 @@ class PasswordResetRequestView(APIView):
                 )
                 
                 
-                return Response({
-                    "status": "success",
-                    "en": "Password reset code is being sent to your email",
-                    "ar": "يتم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
-                    "message": f"A {len(reset_code.code)}-digit code is being sent to {email}",
-                    "task_id": task.id  # Include task ID for tracking
-                }, status=status.HTTP_200_OK)
+                return self.success_response(
+                    message_en="Password reset code is being sent to your email",
+                    message_ar="يتم إرسال رمز إعادة تعيين كلمة المرور إلى بريدك الإلكتروني",
+                    data={
+                        "message": f"A {len(reset_code.code)}-digit code is being sent to {email}",
+                        "task_id": task.id  # Include task ID for tracking
+                    }
+                )
                 
             except Exception as e:
                 # Delete the created code if queuing fails
                 reset_code.delete()
                 
-                return Response({
-                    "status": "error",
-                    "en": "Failed to send reset code",
-                    "ar": "فشل في إرسال رمز إعادة التعيين",
-                    "message": "Please try again later"
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return self.error_response(
+                    message_en="Failed to send reset code",
+                    message_ar="فشل في إرسال رمز إعادة التعيين",
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    error_detail="Please try again later"
+                )
                 
         except User.DoesNotExist:
             # Don't reveal if user exists or not for security
-            return Response({
-                "status": "success",
-                "en": "If an account with this email exists, a reset code has been sent",
-                "ar": "إذا كان هناك حساب بهذا البريد الإلكتروني، تم إرسال رمز إعادة التعيين",
-                "message": "Check your email for password reset instructions"
-            }, status=status.HTTP_200_OK)
+            return self.success_response(
+                message_en="If an account with this email exists, a reset code has been sent",
+                message_ar="إذا كان هناك حساب بهذا البريد الإلكتروني، تم إرسال رمز إعادة التعيين",
+                data={"message": "Check your email for password reset instructions"}
+            )
     
 
 
 
-class PasswordResetConfirmView(APIView):
+class PasswordResetConfirmView(APIView, ResponseMixin):
     permission_classes = [AllowAny]
 
     def post(self, request):
@@ -229,11 +255,11 @@ class PasswordResetConfirmView(APIView):
                 
                 # Check if the code is still valid
                 if not reset_code.is_valid():
-                    return Response({
-                        "status": "error",
-                        "en": "Reset code has expired or is invalid",
-                        "ar": "رمز إعادة التعيين منتهي الصلاحية أو غير صحيح",
-                    }, status=status.HTTP_400_BAD_REQUEST)
+                    return self.error_response(
+                        message_en="Reset code has expired or is invalid",
+                        message_ar="رمز إعادة التعيين منتهي الصلاحية أو غير صحيح",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
                 
                 # Update the user's password
                 user.set_password(new_password)
@@ -248,29 +274,28 @@ class PasswordResetConfirmView(APIView):
                     is_used=False
                 ).update(is_used=True)
                 
-                return Response({
-                    "status": "success",
-                    "en": "Password reset successful",
-                    "ar": "تم إعادة تعيين كلمة المرور بنجاح",
-                    "message": "You can now login with your new password"
-                }, status=status.HTTP_200_OK)
+                return self.success_response(
+                    message_en="Password reset successful",
+                    message_ar="تم إعادة تعيين كلمة المرور بنجاح",
+                    data={"message": "You can now login with your new password"}
+                )
                 
             except PasswordResetCode.DoesNotExist:
-                return Response({
-                    "status": "error",
-                    "en": "Invalid reset code",
-                    "ar": "رمز إعادة التعيين غير صحيح",
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return self.error_response(
+                    message_en="Invalid reset code",
+                    message_ar="رمز إعادة التعيين غير صحيح",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
                 
         except User.DoesNotExist:
-            return Response({
-                "status": "error",
-                "en": "User with this email does not exist",
-                "ar": "لا يوجد مستخدم بهذا البريد الإلكتروني",
-            }, status=status.HTTP_404_NOT_FOUND)
+            return self.error_response(
+                message_en="User with this email does not exist",
+                message_ar="لا يوجد مستخدم بهذا البريد الإلكتروني",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
 
 
-class AccountDeletionView(APIView):
+class AccountDeletionView(APIView, ResponseMixin):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request):
@@ -280,18 +305,17 @@ class AccountDeletionView(APIView):
         
         user = request.user
         if not user.check_password(serializer.validated_data['password']):
-            return Response({
-                "status": "error",
-                "en": "Password is incorrect",
-                "ar": "كلمة المرور غير صحيحة",
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return self.error_response(
+                message_en="Password is incorrect",
+                message_ar="كلمة المرور غير صحيحة",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
         
         # Delete the user
         user.delete()
         
-        return Response({
-            "status": "success",
-            "en": "Account deleted successfully",
-            "ar": "تم حذف الحساب بنجاح",
-        }, status=status.HTTP_200_OK)
+        return self.success_response(
+            message_en="Account deleted successfully",
+            message_ar="تم حذف الحساب بنجاح"
+        )
 

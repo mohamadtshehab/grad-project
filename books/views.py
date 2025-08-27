@@ -12,11 +12,12 @@ from .serializers import (
     BookUploadSerializer, BookStatusSerializer
 )
 from utils.models import Job
+from utils.response_utils import ResponseMixin
 from django.utils import timezone
 from django.db import transaction
 from django.core.files.base import ContentFile
 
-class BookViewSet(viewsets.ModelViewSet):
+class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
     """
     ViewSet for handling book CRUD operations
     """
@@ -90,38 +91,36 @@ class BookViewSet(viewsets.ModelViewSet):
                         job.error = str(e)
                         job.finished_at = timezone.now()
                         job.save(update_fields=["status", "error", "finished_at", "updated_at"])
-                        return Response({
-                            "status": "error",
-                            "errors": str(e),
-                            "en": "Failed to enqueue processing job",
-                            "ar": "فشل في جدولة مهمة المعالجة",
-                            "job_id": str(job.id),
-                        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        return self.error_response(
+                            message_en="Failed to enqueue processing job",
+                            message_ar="فشل في جدولة مهمة المعالجة",
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            error_detail=str(e),
+                            job_id=str(job.id)
+                        )
 
                 # Return 202 with job id and basic book info
-                return Response({
-                    "status": "accepted",
-                    "en": "Book upload accepted; processing started",
-                    "ar": "تم قبول رفع الكتاب؛ بدأت المعالجة",
-                    "job_id": str(job.id),
-                    "data": {"book_id": str(book.book_id)},
-                }, status=status.HTTP_202_ACCEPTED)
+                return self.accepted_response(
+                    message_en="Book upload accepted; processing started",
+                    message_ar="تم قبول رفع الكتاب؛ بدأت المعالجة",
+                    data={"book_id": str(book.book_id),
+                          "job_id": str(job.id)},
+                )
             
             else:
-                return Response({
-                    "status": "error",
-                    "en": "Invalid book data",
-                    "ar": "بيانات الكتاب غير صحيحة",
-                    "errors": serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return self.validation_error_response(
+                    message_en="Invalid book data",
+                    message_ar="بيانات الكتاب غير صحيحة",
+                    errors=serializer.errors
+                )
                 
         except Exception as e:
-            return Response({
-                "status": "error",
-                "en": "Failed to upload book",
-                "ar": "فشل في رفع الكتاب",
-                "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return self.error_response(
+                message_en="Failed to upload book",
+                message_ar="فشل في رفع الكتاب",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
     
     def list(self, request, *args, **kwargs):
         """Get user's books with optional filtering"""
@@ -135,23 +134,22 @@ class BookViewSet(viewsets.ModelViewSet):
             
             serializer = self.get_serializer(queryset, many=True)
             
-            return Response({
-                "status": "success",
-                "en": "Books retrieved successfully",
-                "ar": "تم استرجاع الكتب بنجاح",
-                "data": {
+            return self.success_response(
+                message_en="Books retrieved successfully",
+                message_ar="تم استرجاع الكتب بنجاح",
+                data={
                     "books": serializer.data,
                     "count": queryset.count()
                 }
-            }, status=status.HTTP_200_OK)
+            )
             
         except Exception as e:
-            return Response({
-                "status": "error",
-                "en": "Failed to retrieve books",
-                "ar": "فشل في استرجاع الكتب",
-                "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return self.error_response(
+                message_en="Failed to retrieve books",
+                message_ar="فشل في استرجاع الكتب",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
     
     def retrieve(self, request, *args, **kwargs):
         """Get detailed book information"""
@@ -159,20 +157,19 @@ class BookViewSet(viewsets.ModelViewSet):
             book = self.get_object()
             serializer = self.get_serializer(book)
             
-            return Response({
-                "status": "success",
-                "en": "Book details retrieved successfully",
-                "ar": "تم استرجاع تفاصيل الكتاب بنجاح",
-                "data": serializer.data
-            }, status=status.HTTP_200_OK)
+            return self.success_response(
+                message_en="Book details retrieved successfully",
+                message_ar="تم استرجاع تفاصيل الكتاب بنجاح",
+                data=serializer.data
+            )
             
         except Exception as e:
-            return Response({
-                "status": "error",
-                "en": "Failed to get book details",
-                "ar": "فشل في الحصول على تفاصيل الكتاب",
-                "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return self.error_response(
+                message_en="Failed to get book details",
+                message_ar="فشل في الحصول على تفاصيل الكتاب",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
     
     def destroy(self, request, *args, **kwargs):
         """Soft delete a book"""
@@ -182,19 +179,18 @@ class BookViewSet(viewsets.ModelViewSet):
             book.save()
             
             
-            return Response({
-                "status": "success",
-                "en": "Book deleted successfully",
-                "ar": "تم حذف الكتاب بنجاح",
-            }, status=status.HTTP_200_OK)
+            return self.success_response(
+                message_en="Book deleted successfully",
+                message_ar="تم حذف الكتاب بنجاح"
+            )
             
         except Exception as e:
-            return Response({
-                "status": "error",
-                "en": "Failed to delete book",
-                "ar": "فشل في حذف الكتاب",
-                "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return self.error_response(
+                message_en="Failed to delete book",
+                message_ar="فشل في حذف الكتاب",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
     
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
@@ -204,21 +200,19 @@ class BookViewSet(viewsets.ModelViewSet):
             
             # Check if file exists
             if not book.file or not book.file.name:
-                return Response({
-                    "status": "error",
-                    "en": "Book file not found",
-                    "ar": "ملف الكتاب غير موجود",
-                }, status=status.HTTP_404_NOT_FOUND)
+                return self.not_found_response(
+                    message_en="Book file not found",
+                    message_ar="ملف الكتاب غير موجود"
+                )
             
             # Get file path
             file_path = book.file.path
             
             if not os.path.exists(file_path):
-                return Response({
-                    "status": "error",
-                    "en": "Book file not found on server",
-                    "ar": "ملف الكتاب غير موجود على الخادم",
-                }, status=status.HTTP_404_NOT_FOUND)
+                return self.not_found_response(
+                    message_en="Book file not found on server",
+                    message_ar="ملف الكتاب غير موجود على الخادم"
+                )
             
             # Determine content type
             content_type, _ = mimetypes.guess_type(file_path)
@@ -237,12 +231,12 @@ class BookViewSet(viewsets.ModelViewSet):
             return response
             
         except Exception as e:
-            return Response({
-                "status": "error",
-                "en": "Failed to download book",
-                "ar": "فشل في تحميل الكتاب",
-                "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return self.error_response(
+                message_en="Failed to download book",
+                message_ar="فشل في تحميل الكتاب",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
     
     @action(detail=True, methods=['get'])
     def status(self, request, pk=None):
@@ -251,20 +245,19 @@ class BookViewSet(viewsets.ModelViewSet):
             book = self.get_object()
             serializer = BookStatusSerializer(book)
             
-            return Response({
-                "status": "success",
-                "en": "Book status retrieved successfully",
-                "ar": "تم استرجاع حالة الكتاب بنجاح",
-                "data": serializer.data
-            }, status=status.HTTP_200_OK)
+            return self.success_response(
+                message_en="Book status retrieved successfully",
+                message_ar="تم استرجاع حالة الكتاب بنجاح",
+                data=serializer.data
+            )
             
         except Exception as e:
-            return Response({
-                "status": "error",
-                "en": "Failed to get book status",
-                "ar": "فشل في الحصول على حالة الكتاب",
-                "error": str(e)
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return self.error_response(
+                message_en="Failed to get book status",
+                message_ar="فشل في الحصول على حالة الكتاب",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
 
 
 

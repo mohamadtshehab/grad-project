@@ -27,22 +27,34 @@ logging.basicConfig(level=getattr(logging, LOG_LEVEL), format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 
-def first_name_querier(state: State) -> Dict[str, List[str]]:
+def first_name_querier(state: dict):
     """
-    Node that queries character names in the current chunk.
-    Refactored to use AI service.
+    Node that queries character names using the current chunk and, if available,
+    the last third of the previous chunk as context.
     """
-    logger.info("Extracting character names from current chunk")
+    logger.info("Extracting character names from the current chunk.")
     
-    previous_chunk = state['clean_chunks'][state['chunk_num'] - 1]
-    third_of_length = len(previous_chunk) // 3
-    context = str(previous_chunk[2 * third_of_length:])
+    chunk_num = state['chunk_num']
+    all_chunks = state['clean_chunks']
+    current_chunk = all_chunks[chunk_num]
     
+    # Initialize context with the current chunk. This also handles the first chunk (index 0).
+    context = str(current_chunk)
+
+    # If it's not the first chunk, prepend context from the previous chunk.
+    if chunk_num > 0:
+        previous_chunk = all_chunks[chunk_num - 1]
+        third_of_length = len(previous_chunk) // 3
+        previous_chunk_context = str(previous_chunk[2 * third_of_length:])
+        
+        # Combine the context from the previous chunk with the current chunk.
+        context = f"{previous_chunk_context}\n\n{current_chunk}"
+
+    # Use the combined context to extract character names.
     characters = AIChainService.extract_character_names(context)
     
-    logger.info(f"Found {len(characters)} character names")
+    logger.info(f"Found {len(characters)} character names.")
     return {'last_appearing_names': characters}
-
 
 def second_name_querier(state: State) -> Dict[str, List[str]]:
     """
