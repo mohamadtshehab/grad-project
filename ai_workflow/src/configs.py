@@ -3,6 +3,10 @@ Configuration constants and settings for the AI workflow.
 Centralizes all configuration values and thresholds.
 """
 
+# Graph configuration
+GRAPH_RECURSION_LIMIT = 100000
+
+
 # Similarity matching thresholds
 SIMILARITY_THRESHOLD = 0.9
 EMBEDDING_CACHE_SIZE = 1000
@@ -40,9 +44,6 @@ PROGRESS_CALLBACK_INTERVAL = 1  # Send progress every N chunks
 
 # Django settings
 DEFAULT_DJANGO_SETTINGS = 'graduation_backend.settings'
-
-# Graph configuration
-GRAPH_CONFIG = {"configurable": {"thread_id": 1}, 'recursion_limit': 100000}
 
 # Fuzzy matching configuration
 FUZZY_MATCHING_CONFIG = {
