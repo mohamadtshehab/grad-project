@@ -1,7 +1,7 @@
 from django.db import models
 from django.conf import settings
 import uuid
-
+from books.models import Book
 
 class TimeStampedModel(models.Model):
     """
@@ -33,7 +33,15 @@ class Job(TimeStampedModel):
 		blank=True,
 	)
 	job_type = models.CharField(max_length=100, db_index=True)
-	book = models.UUIDField(null=True, blank=True, help_text="ID of the book being processed")
+ 
+	book = models.ForeignKey(
+		Book,
+		on_delete=models.CASCADE,
+		related_name="jobs",
+		null=True,
+		blank=True,
+		)
+ 
 	status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
 	progress = models.PositiveSmallIntegerField(default=0)
 	result = models.JSONField(null=True, blank=True)

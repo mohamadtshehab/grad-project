@@ -19,7 +19,7 @@ class Character(models.Model):
     Model for storing character profiles extracted by an AI workflow. 
     Each character is unique to a specific book.
     """
-    character_id = models.UUIDField(
+    id = models.UUIDField(
         primary_key=True, 
         default=uuid.uuid4, 
         editable=False,
@@ -27,7 +27,7 @@ class Character(models.Model):
     )
     
     # The custom encoder is removed as Django's JSONField handles Unicode well.
-    profile = models.JSONField(
+    golden_profile = models.JSONField(
         help_text="Flexible JSON data for the character's profile (e.g., name, age, personality).",
         encoder=UnicodeJSONEncoder
     )
@@ -52,13 +52,13 @@ class Character(models.Model):
     
     def __str__(self):
         """Returns a human-readable representation of the character."""
-        name = self.profile.get('name', 'Unknown Character')
+        name = self.golden_profile.get('name', 'Unknown Character')
         return f"{name} in '{self.book.title}'"
     
     @property
     def name(self):
         """A convenient property to access the character's name from the JSON data."""
-        return self.profile.get('name', '') if self.profile else ''
+        return self.golden_profile.get('name', '') if self.golden_profile else ''
 
 
 class ChunkCharacter(models.Model):
@@ -69,22 +69,17 @@ class ChunkCharacter(models.Model):
     chunk = models.ForeignKey(
         Chunk,
         on_delete=models.CASCADE,
-        related_name='character_mentions'
     )
+    
     character = models.ForeignKey(
         Character,
         on_delete=models.CASCADE,
         related_name='chunk_mentions'
     )
     
-    mention_count = models.PositiveIntegerField(
-        default=1,
-        help_text="Number of times the character is mentioned in this chunk."
-    )
-    position_info = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="JSON data on the positions of mentions within the chunk."
+    character_profile = models.JSONField(
+        help_text="Flexible JSON data for the character's profile (e.g., name, age, personality).",
+        encoder=UnicodeJSONEncoder
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -112,6 +107,11 @@ class CharacterRelationship(models.Model):
     """
 
     # Using more descriptive field names like 'from_character' and 'to_character'
+    chunk = models.ForeignKey(
+        Chunk,
+        on_delete=models.CASCADE,
+    )
+    
     from_character = models.ForeignKey(
         Character,
         on_delete=models.CASCADE,
@@ -129,25 +129,14 @@ class CharacterRelationship(models.Model):
         max_length=50,
         help_text="The nature of the relationship."
     )
-    description = models.TextField(
-        blank=True,
-        help_text="A detailed description of the relationship."
-    )
-    
-    book = models.ForeignKey(
-        Book,
-        on_delete=models.CASCADE,
-        related_name='character_relationships',
-        help_text="The book in which this relationship exists."
-    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'character_relationship'
-        unique_together = ['from_character', 'to_character', 'book']
-        ordering = ['book', 'from_character', 'to_character']
+        unique_together = ['from_character', 'to_character', 'chunk']
+        ordering = ['chunk', 'from_character', 'to_character']
         constraints = [
             # Ensures a character cannot be related to themselves.
             models.CheckConstraint(
@@ -162,9 +151,6 @@ class CharacterRelationship(models.Model):
             )
         ]
 
-    def __str__(self):
-        return f"{self.from_character.name} -> {self.get_relationship_type_display()} -> {self.to_character.name}"
-
     def clean(self):
         """
         Custom validation to enforce canonical order before saving.
@@ -175,10 +161,8 @@ class CharacterRelationship(models.Model):
             if self.from_character.book != self.to_character.book:
                 raise ValidationError("Both characters must belong to the same book.")
             
-            # Auto-assign the relationship's book from the characters
-            self.book = self.from_character.book
-
             # Automatically swap characters to maintain canonical order (from.id < to.id)
             # We use the string representation of UUIDs for comparison
             if str(self.from_character.pk) > str(self.to_character.pk):
                 self.from_character, self.to_character = self.to_character, self.from_character
+                

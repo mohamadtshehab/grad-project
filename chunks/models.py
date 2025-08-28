@@ -7,7 +7,7 @@ class Chunk(models.Model):
     """
     Model for storing text chunks extracted from books
     """
-    chunk_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     chunk_text = models.TextField(help_text="The actual text content of the chunk")
     chunk_number = models.IntegerField(help_text="Sequential number of the chunk within the book")
     
@@ -17,23 +17,6 @@ class Chunk(models.Model):
         on_delete=models.CASCADE,
         related_name='chunks',
         help_text="Book this chunk belongs to"
-    )
-    
-    # Additional metadata
-    start_position = models.PositiveIntegerField(
-        null=True, 
-        blank=True,
-        help_text="Starting character position in the original text"
-    )
-    end_position = models.PositiveIntegerField(
-        null=True, 
-        blank=True,
-        help_text="Ending character position in the original text"
-    )
-    word_count = models.PositiveIntegerField(
-        null=True, 
-        blank=True,
-        help_text="Number of words in this chunk"
     )
     
     created_at = models.DateTimeField(auto_now_add=True)

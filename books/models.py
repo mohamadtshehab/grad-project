@@ -46,10 +46,8 @@ def txt_file_upload_path(instance, filename):
     return f"books/book_{instance.book_id}/{filename}"
 
 class Book(models.Model):
-    book_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255, blank=True, null=True, help_text="Book title")
-    author = models.CharField(max_length=255, null=True, blank=True, help_text="Book author")
-    description = models.TextField(null=True, blank=True, help_text="Book description")
     detected_language = models.CharField(max_length=10, null=True, blank=True, help_text="Detected language code (e.g., 'ar', 'en')")
     language_confidence = models.FloatField(null=True, blank=True, help_text="Confidence score for language detection (0.0-1.0)")
     quality_score = models.FloatField(null=True, blank=True, help_text="Text quality assessment score (0.0-1.0)")
@@ -73,7 +71,7 @@ class Book(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.title} by {self.author or 'Unknown'}"
+        return f"{self.title}"
     
     @property
     def file_size(self):
