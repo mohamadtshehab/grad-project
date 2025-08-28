@@ -75,6 +75,7 @@ class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
                     job = Job.objects.create(
                         user=request.user,
                         job_type="book_workflow_process",
+                        book=book.book_id,
                         status=Job.Status.PENDING,
                         progress=0,
                     )
@@ -83,8 +84,6 @@ class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
                     try:
                         process_book_workflow.delay(
                             job_id=str(job.id),
-                            user_id=str(request.user.id),
-                            book_id=str(book.book_id),
                         )
                     except Exception as e:
                         job.status = Job.Status.FAILED
