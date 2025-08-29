@@ -1,10 +1,19 @@
 from django.db import models
+<<<<<<< HEAD
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 import uuid
 from utils.models import TimeStampedModel
 
 
 class UserManager(BaseUserManager):
+=======
+from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.base_user import BaseUserManager
+import uuid
+
+
+class UserManager(BaseUserManager["User"]):
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     """Custom user manager for email-based authentication"""
     
     def create_user(self, email, name, password=None, **extra_fields):
@@ -30,14 +39,24 @@ class UserManager(BaseUserManager):
         return self.create_user(email, name, password, **extra_fields)
 
 
+<<<<<<< HEAD
 class User(AbstractUser, TimeStampedModel):
     """
     Custom User model extending Django's AbstractUser
     """
+=======
+class User(AbstractUser):
+    """
+    Custom User model extending Django's AbstractUser
+    """
+    # Use email as the unique identifier for authentication instead of username
+    username = None
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255, help_text="User's full name")
     email = models.EmailField(unique=True, help_text="User's email address")
     
+<<<<<<< HEAD
     # Remove username field since we're using email as the unique identifier
     username = None
     
@@ -46,6 +65,15 @@ class User(AbstractUser, TimeStampedModel):
     
     objects = UserManager()
     
+=======
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['name']
+    
+    objects: UserManager = UserManager()
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     class Meta:
         db_table = 'user'
         ordering = ['name']

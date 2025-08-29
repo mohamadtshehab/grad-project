@@ -150,10 +150,17 @@ class Command(BaseCommand):
             self.stdout.write(f'Using existing user: {user.name} ({user.email})')
         except User.DoesNotExist:
             if not options.get('dry_run'):
+<<<<<<< HEAD
                 user = User.objects.create_user(
                     email=email,
                     name=name,
                     password='test123',  # Simple password for test user
+=======
+                user = User.objects.create(
+                    email=email,
+                    name=name,
+                    password='test123',
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                     is_active=True
                 )
                 self.stdout.write(
@@ -173,7 +180,11 @@ class Command(BaseCommand):
         # Check if book already exists
         existing_book = Book.objects.filter(title=title).first()
         if existing_book and not options['force']:
+<<<<<<< HEAD
             self.stdout.write(f'📚 Skipping "{title}" - already exists (ID: {existing_book.book_id})')
+=======
+            self.stdout.write(f'📚 Skipping "{title}" - already exists (ID: {existing_book.id})')
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             return 'skipped'
         
         if options['dry_run']:
@@ -184,8 +195,11 @@ class Command(BaseCommand):
             # Create book entry
             book = Book.objects.create(
                 title=title,
+<<<<<<< HEAD
                 author='Unknown',  # Could be enhanced with metadata extraction
                 description=f'Test book: {title}',
+=======
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 user=user,
                 processing_status='pending'
             )
@@ -209,7 +223,11 @@ class Command(BaseCommand):
                 )
                 
                 self.stdout.write(
+<<<<<<< HEAD
                     self.style.SUCCESS(f'✅ Added "{title}" (ID: {book.book_id}) with TXT conversion')
+=======
+                    self.style.SUCCESS(f'✅ Added "{title}" (ID: {book.id}) with TXT conversion')
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 )
             except Exception as txt_error:
                 self.stdout.write(
@@ -217,7 +235,11 @@ class Command(BaseCommand):
                 )
                 # Still consider it added even if TXT conversion fails
                 self.stdout.write(
+<<<<<<< HEAD
                     self.style.SUCCESS(f'✅ Added "{title}" (ID: {book.book_id}) - EPUB only')
+=======
+                    self.style.SUCCESS(f'✅ Added "{title}" (ID: {book.id}) - EPUB only')
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 )
             
             return 'added'

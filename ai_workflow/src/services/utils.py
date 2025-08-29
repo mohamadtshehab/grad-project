@@ -153,3 +153,26 @@ def validate_profile_data(profile_data: Any) -> bool:
             return False
     
     return True
+<<<<<<< HEAD
+=======
+
+
+def get_summarizer_and_first_name_querier_context(state):
+    chunk_num = state['chunk_num']
+    all_chunks = state['clean_chunks']
+    current_chunk = all_chunks[chunk_num]
+    
+    # Initialize context with the current chunk. This also handles the first chunk (index 0).
+    context = str(current_chunk)
+
+    # If it's not the first chunk, prepend context from the previous chunk.
+    if chunk_num > 0:
+        previous_chunk = all_chunks[chunk_num - 1]
+        third_of_length = len(previous_chunk) // 3
+        previous_chunk_context = str(previous_chunk[2 * third_of_length:])
+        
+        # Combine the context from the previous chunk with the current chunk.
+        context = f"{previous_chunk_context}\n\n{current_chunk}"
+
+    return context
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96

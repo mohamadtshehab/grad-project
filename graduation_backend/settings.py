@@ -258,18 +258,33 @@ LOGGING = {
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
             'formatter': 'verbose',
+<<<<<<< HEAD
+=======
+            # Explicitly setting UTF-8 encoding for the file handler.
+            'encoding': 'utf-8',
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         },
         'ai_workflow_file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'ai_workflow.log',
             'formatter': 'detailed',
+<<<<<<< HEAD
+=======
+            # Explicitly setting UTF-8 encoding for the file handler.
+            'encoding': 'utf-8',
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         },
         'error_file': {
             'level': 'ERROR',
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'logs' / 'errors.log',
             'formatter': 'detailed',
+<<<<<<< HEAD
+=======
+            # Explicitly setting UTF-8 encoding for the file handler.
+            'encoding': 'utf-8',
+>>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         },
     },
     'root': {
