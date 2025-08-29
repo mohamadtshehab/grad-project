@@ -30,12 +30,22 @@ class CharacterForMentionSerializer(serializers.ModelSerializer):
 
 class ChunkCharacterSerializer(serializers.ModelSerializer):
     """Serializer for a character mention within a chunk."""
-    # Use the nested serializer here
-    character = CharacterForMentionSerializer(read_only=True)
+    character_id = serializers.SerializerMethodField()
+    character_profile = serializers.SerializerMethodField()
 
     class Meta:
         model = ChunkCharacter
-        fields = ['character']
+        fields = ['character_id', 'character_profile']
+    
+    def get_character_id(self, obj):
+        """Get the character ID directly."""
+        return str(obj.character.id)
+    
+    def get_character_profile(self, obj):
+        """Get the character profile for this specific chunk."""
+        if obj.character_profile:
+            return obj.character_profile
+        return {}
 
 
 class CharacterRelationshipSerializer(serializers.ModelSerializer):

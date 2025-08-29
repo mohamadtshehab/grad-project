@@ -175,6 +175,9 @@ class ChunkViewSet(viewsets.ReadOnlyModelViewSet, ResponseMixin):
 def chunk_characters(request, chunk_id: str):
     """
     List all characters mentioned in a single chunk.
+    
+    Query parameters:
+    - character_id (optional): Filter to return only the specified character
     """
     try:
         # Assuming your Chunk primary key is a UUIDField named 'chunk_id'
@@ -194,7 +197,33 @@ def chunk_characters(request, chunk_id: str):
             book__user=request.user
         )
 
-        mentions = ChunkCharacter.objects.select_related('character').filter(chunk=chunk).order_by('character__created_at')
+        # Check for character_id filter
+        character_id_param = request.query_params.get('character_id')
+        
+        if character_id_param:
+            try:
+                character_uuid = uuid.UUID(character_id_param)
+                # Filter to only the specified character
+                mentions = ChunkCharacter.objects.select_related('character').filter(
+                    chunk=chunk,
+                    character_id=character_uuid
+                ).order_by('character__created_at')
+                
+                if not mentions.exists():
+                    return StandardResponse.error(
+                        message_en="Character not found in this chunk",
+                        message_ar="الشخصية غير موجودة في هذا الجزء",
+                        status_code=status.HTTP_404_NOT_FOUND
+                    )
+            except ValueError:
+                return StandardResponse.error(
+                    message_en="Invalid character ID format",
+                    message_ar="تنسيق معرف الشخصية غير صحيح",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            # Get all characters in the chunk
+            mentions = ChunkCharacter.objects.select_related('character').filter(chunk=chunk).order_by('character__created_at')
 
         serializer = ChunkCharacterSerializer(mentions, many=True)
         
@@ -204,6 +233,7 @@ def chunk_characters(request, chunk_id: str):
             data={
                 'chunk_id': str(chunk.pk),
                 'book_id': str(chunk.book.pk),
+                'filtered_character': character_id_param,
                 'characters': serializer.data,
             }
         )
@@ -314,12 +344,32 @@ def chunk_relationships(request, chunk_id: str):
             'to_character'
         ).order_by('created_at')
         
-        # Create simplified relationship data
+        # Create simplified relationship data with character names
         simplified_relationships = []
         for relationship in relationships:
+            # Get character names from their profiles in this chunk
+            from_character_profile = ChunkCharacter.objects.filter(
+                chunk=chunk, 
+                character=relationship.from_character
+            ).first()
+            to_character_profile = ChunkCharacter.objects.filter(
+                chunk=chunk, 
+                character=relationship.to_character
+            ).first()
+            
+            # Extract names from profiles, fallback to ID if no name
+            from_name = (from_character_profile.character_profile.get('name') 
+                        if from_character_profile and from_character_profile.character_profile 
+                        else str(relationship.from_character.id))
+            to_name = (to_character_profile.character_profile.get('name') 
+                      if to_character_profile and to_character_profile.character_profile 
+                      else str(relationship.to_character.id))
+            
             simplified_relationships.append({
                 'from_character_id': str(relationship.from_character.id),
+                'from_character_name': from_name,
                 'to_character_id': str(relationship.to_character.id),
+                'to_character_name': to_name,
                 'relationship_type': relationship.relationship_type,
             })
         

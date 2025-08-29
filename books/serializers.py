@@ -9,13 +9,14 @@ class BookListSerializer(serializers.ModelSerializer):
     
     file_size_mb = serializers.SerializerMethodField()
     file_extension = serializers.SerializerMethodField()
+    chunk_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Book
         fields = [
             'id', 'title', 
             'processing_status', 'file_size_mb', 'file_extension',
-            'created_at', 'updated_at'
+            'chunk_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
@@ -33,6 +34,13 @@ class BookListSerializer(serializers.ModelSerializer):
             return os.path.splitext(obj.file.name)[1].lower()
         except:
             return None
+    
+    def get_chunk_count(self, obj):
+        """Return the number of chunks in the book"""
+        try:
+            return obj.chunks.count()
+        except:
+            return 0
 
 
 class BookDetailSerializer(serializers.ModelSerializer):
@@ -41,6 +49,7 @@ class BookDetailSerializer(serializers.ModelSerializer):
     file_size_mb = serializers.SerializerMethodField()
     file_extension = serializers.SerializerMethodField()
     file_name = serializers.SerializerMethodField()
+    chunk_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Book
@@ -48,7 +57,7 @@ class BookDetailSerializer(serializers.ModelSerializer):
             'id', 'title', 
             'processing_status', 'processing_error',
             'file_size_mb', 'file_extension', 'file_name',
-            'created_at', 'updated_at'
+            'chunk_count', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'processing_status', 'processing_error',
@@ -76,6 +85,13 @@ class BookDetailSerializer(serializers.ModelSerializer):
             return os.path.basename(obj.file.name)
         except:
             return None
+    
+    def get_chunk_count(self, obj):
+        """Return the number of chunks in the book"""
+        try:
+            return obj.chunks.count()
+        except:
+            return 0
 
 
 class BookUploadSerializer(serializers.ModelSerializer):

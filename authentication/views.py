@@ -322,3 +322,73 @@ class AccountDeletionView(APIView, ResponseMixin):
             message_ar="تم حذف الحساب بنجاح"
         )
 
+
+class UserListView(APIView, ResponseMixin):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get all users in the system - Staff only"""
+        # Check if user is staff
+        
+        try:
+            # Get all users with basic information
+            users = User.objects.all().order_by('-created_at')
+            
+            # Get pagination parameters with validation
+            try:
+                page = int(request.query_params.get('page', 1))
+                page_size = int(request.query_params.get('page_size', 50))
+                
+                # Validate pagination parameters
+                if page < 1:
+                    page = 1
+                if page_size < 1 or page_size > 100:  # Max 100 users per page
+                    page_size = 50
+                    
+            except (ValueError, TypeError):
+                page = 1
+                page_size = 50
+            
+            # Apply pagination
+            start_index = (page - 1) * page_size
+            end_index = start_index + page_size
+            paginated_users = users[start_index:end_index]
+            
+            # Serialize user data (excluding sensitive information)
+            user_data = []
+            for user in paginated_users:
+                # Cast to our custom User model to access custom fields
+                custom_user = user
+                user_data.append({
+                    'id': str(custom_user.id),
+                    'name': custom_user.name,
+                    'email': custom_user.email,
+                    'created_at': custom_user.created_at.isoformat() if hasattr(custom_user, 'created_at') and custom_user.created_at else None,
+                    'updated_at': custom_user.updated_at.isoformat() if hasattr(custom_user, 'updated_at') and custom_user.updated_at else None,
+                    'is_active': custom_user.is_active,
+                    'is_staff': custom_user.is_staff,
+                    'is_superuser': custom_user.is_superuser,
+                })
+            
+            return self.success_response(
+                message_en="Users retrieved successfully",
+                message_ar="تم استرجاع المستخدمين بنجاح",
+                data={
+                    'users': user_data,
+                    'total_count': users.count(),
+                    'page': page,
+                    'page_size': page_size,
+                    'total_pages': (users.count() + page_size - 1) // page_size,
+                    'has_next': end_index < users.count(),
+                    'has_previous': page > 1
+                }
+            )
+            
+        except Exception as e:
+            return self.error_response(
+                message_en="Failed to retrieve users",
+                message_ar="فشل في استرجاع المستخدمين",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                error_detail=str(e)
+            )
+
