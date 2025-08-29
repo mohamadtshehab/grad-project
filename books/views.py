@@ -75,7 +75,7 @@ class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
                     job = Job.objects.create(
                         user=request.user,
                         job_type="book_workflow_process",
-                        book=book.book_id,
+                        book=book,
                         status=Job.Status.PENDING,
                         progress=0,
                     )
@@ -102,7 +102,7 @@ class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
                 return self.accepted_response(
                     message_en="Book upload accepted; processing started",
                     message_ar="تم قبول رفع الكتاب؛ بدأت المعالجة",
-                    data={"book_id": str(book.book_id),
+                    data={"book_id": str(book.id),
                           "job_id": str(job.id)},
                 )
             

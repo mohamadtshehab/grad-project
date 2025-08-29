@@ -4,6 +4,7 @@ import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Q, F
+from django.forms import CharField
 from books.models import Book
 from chunks.models import Chunk
 import json
@@ -25,20 +26,14 @@ class Character(models.Model):
         editable=False,
         help_text="Unique identifier for each character."
     )
-    
-    # The custom encoder is removed as Django's JSONField handles Unicode well.
-    golden_profile = models.JSONField(
-        help_text="Flexible JSON data for the character's profile (e.g., name, age, personality).",
-        encoder=UnicodeJSONEncoder
-    )
-    
+        
     book = models.ForeignKey(
         Book,
         on_delete=models.CASCADE,
         related_name='characters',
         help_text="The book this character belongs to."
     )
-    
+        
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -50,16 +45,6 @@ class Character(models.Model):
             models.Index(fields=['created_at']),
         ]
     
-    def __str__(self):
-        """Returns a human-readable representation of the character."""
-        name = self.golden_profile.get('name', 'Unknown Character')
-        return f"{name} in '{self.book.title}'"
-    
-    @property
-    def name(self):
-        """A convenient property to access the character's name from the JSON data."""
-        return self.golden_profile.get('name', '') if self.golden_profile else ''
-
 
 class ChunkCharacter(models.Model):
     """
@@ -78,7 +63,7 @@ class ChunkCharacter(models.Model):
     )
     
     character_profile = models.JSONField(
-        help_text="Flexible JSON data for the character's profile (e.g., name, age, personality).",
+        help_text="Flexible JSON data for the character's profile (e.g., name, personality).",
         encoder=UnicodeJSONEncoder
     )
     
@@ -97,8 +82,6 @@ class ChunkCharacter(models.Model):
             models.Index(fields=['character']),
         ]
     
-    def __str__(self):
-        return f"Mention of {self.character.name} in {self.chunk}"
 
 
 class CharacterRelationship(models.Model):

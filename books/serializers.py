@@ -13,11 +13,11 @@ class BookListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = [
-            'book_id', 'title', 'author', 'description', 
+            'id', 'title', 
             'processing_status', 'file_size_mb', 'file_extension',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['book_id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_file_size_mb(self, obj):
         """Return file size in MB"""
@@ -45,13 +45,13 @@ class BookDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = [
-            'book_id', 'title', 'author', 'description', 
+            'id', 'title', 
             'processing_status', 'processing_error',
             'file_size_mb', 'file_extension', 'file_name',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'book_id', 'processing_status', 'processing_error',
+            'id', 'processing_status', 'processing_error',
             'created_at', 'updated_at'
         ]
     
@@ -83,7 +83,7 @@ class BookUploadSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Book
-        fields = ['title', 'author', 'description', 'file']
+        fields = ['title', 'file']
         
     def validate_file(self, value):
         """Validate uploaded file"""
@@ -127,10 +127,10 @@ class BookStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Book
         fields = [
-            'book_id', 'title', 'processing_status', 
+            'id', 'title', 'processing_status', 
             'processing_error', 'updated_at'
         ]
-        read_only_fields = ['book_id', 'title', 'processing_status', 'processing_error', 'updated_at']
+        read_only_fields = ['id', 'title', 'processing_status', 'processing_error', 'updated_at']
 
 
 

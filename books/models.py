@@ -39,11 +39,11 @@ def validate_book_file(value):
         )
 
 def book_upload_path(instance, filename):
-    """Generate upload path for book files using book_id"""
-    return f'books/book_{instance.book_id}/{filename}'
+    """Generate upload path for book files using book id"""
+    return f'books/book_{instance.id}/{filename}'
 
 def txt_file_upload_path(instance, filename):
-    return f"books/book_{instance.book_id}/{filename}"
+    return f"books/book_{instance.id}/{filename}"
 
 class Book(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -87,12 +87,12 @@ class Book(models.Model):
         return os.path.splitext(self.file.name)[1].lower() if self.file else None
     
     @classmethod
-    def get_file_path_by_id(cls, book_id: str) -> str:
+    def get_file_path_by_id(cls, id: str) -> str:
         """
         Get the original EPUB file path for a book by its ID.
         
         Args:
-            book_id: The UUID of the book
+            id: The UUID of the book
             
         Returns:
             The full file path to the original EPUB file
@@ -102,9 +102,9 @@ class Book(models.Model):
             ValueError: If book has no file
         """
         try:
-            book = cls.objects.get(book_id=book_id)
+            book = cls.objects.get(id=id)
             if not book.file:
-                raise ValueError(f"Book {book_id} has no file attached")
+                raise ValueError(f"Book {id} has no file attached")
             return book.file.path
         except cls.DoesNotExist:
-            raise cls.DoesNotExist(f"Book with ID {book_id} not found")
+            raise cls.DoesNotExist(f"Book with ID {id} not found")

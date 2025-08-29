@@ -3,18 +3,7 @@ from django.conf import settings
 import uuid
 from books.models import Book
 
-class TimeStampedModel(models.Model):
-    """
-    Abstract base model that provides self-updating created_at and updated_at fields.
-    """
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
-
-
-class Job(TimeStampedModel):
+class Job(models.Model):
 	"""Represents a long-running background job processed by Celery."""
 
 	class Status(models.TextChoices):
@@ -48,6 +37,8 @@ class Job(TimeStampedModel):
 	error = models.TextField(blank=True)
 	started_at = models.DateTimeField(null=True, blank=True)
 	finished_at = models.DateTimeField(null=True, blank=True)
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
 	langgraph_thread_id = models.CharField(
 			max_length=255, 
 			unique=True, 

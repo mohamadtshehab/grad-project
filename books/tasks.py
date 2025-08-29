@@ -45,7 +45,7 @@ def _configure_graph_execution(
         job.langgraph_thread_id = thread_id
         job.save(update_fields=["langgraph_thread_id"])
         initial_state = create_initial_state(
-            book_id=str(job.book),
+            book_id=str(job.book.id),
             job_id=str(job.id),
             from_http=False
         )
@@ -91,7 +91,7 @@ def _handle_workflow_failure(exc: Exception, job: Job):
         job.error = str(exc)
         job.finished_at = timezone.now()
         job.save(update_fields=["status", "error", "finished_at", "updated_at"])
-        book = Book.objects.get(id=job.book)
+        book = Book.objects.get(id=job.book.id)
         book.processing_status = 'failed'
         book.processing_error = str(exc)
         book.save()
