@@ -8,10 +8,7 @@ class JobSerializer(serializers.ModelSerializer):
 		fields = [
 			"id",
 			"user",
-<<<<<<< HEAD
-=======
 			"book",
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 			"job_type",
 			"status",
 			"progress",

@@ -30,14 +30,9 @@ class ProfileProcessor:
         self, 
         last_profiles_by_name: Dict[str, List[Character]], 
         last_summary: str,
-<<<<<<< HEAD
-        book_id: str,
-        character_names: List[str]
-=======
         book_id: Optional[str],
         character_names: List[str],
         chunk_number: int
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     ) -> Dict[str, List[Character]]:
         """
         Main entry point for processing profile updates.
@@ -63,14 +58,10 @@ class ProfileProcessor:
         self._build_embedding_cache(pydantic_chars_by_name)
         
         # 4. Process each profile update
-<<<<<<< HEAD
-        book = Book.objects.get(book_id=book_id)
-=======
         if not book_id:
             logger.warning("No book_id provided; skipping profile updates")
             return pydantic_chars_by_name
         book = Book.objects.get(id=book_id)
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         
         with transaction.atomic():
             for new_profile_data in profile_diffs.profiles:
@@ -82,12 +73,8 @@ class ProfileProcessor:
                     new_profile_data,
                     pydantic_chars_by_name,
                     django_chars_by_id,
-<<<<<<< HEAD
-                    book
-=======
                     book,
                     chunk_number
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 )
         
         logger.info("Profile update processing completed")
@@ -157,12 +144,8 @@ class ProfileProcessor:
         new_profile_data: Any,
         pydantic_chars_by_name: Dict[str, List[Character]],
         django_chars_by_id: Dict[str, Any],
-<<<<<<< HEAD
-        book: Book
-=======
         book: Book,
         chunk_number: int
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     ) -> None:
         """Process a single profile update."""
         model_name_raw = safe_str(new_profile_data.name)
@@ -185,21 +168,13 @@ class ProfileProcessor:
             # Update existing character
             self._update_existing_character(
                 matched_profile, new_profile_data, model_name_raw,
-<<<<<<< HEAD
-                pydantic_profiles_list, django_chars_by_id
-=======
                 pydantic_profiles_list, django_chars_by_id, book, chunk_number
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             )
         else:
             # Create new character
             self._create_new_character(
                 new_profile_data, model_name_raw, book,
-<<<<<<< HEAD
-                pydantic_profiles_list, matched_key
-=======
                 pydantic_profiles_list, matched_key, chunk_number
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             )
     
     def _find_character_key(
@@ -273,13 +248,9 @@ class ProfileProcessor:
         new_profile_data: Any,
         model_name_raw: str,
         pydantic_profiles_list: List[Character],
-<<<<<<< HEAD
-        django_chars_by_id: Dict[str, Any]
-=======
         django_chars_by_id: Dict[str, Any],
         book: Book,
         chunk_number: int
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     ) -> None:
         """Update an existing character with new profile data."""
         logger.info(f"Updating existing character: {existing_char.profile.name}")
@@ -287,17 +258,10 @@ class ProfileProcessor:
         # Merge profile data
         merged_profile = self._merge_profiles(existing_char.profile, new_profile_data, model_name_raw)
         
-<<<<<<< HEAD
-        # Update Django model
-        django_character = django_chars_by_id.get(existing_char.id)
-        if django_character:
-            CharacterDBService.update_character_profile(django_character, merged_profile)
-=======
         # Persist merged profile for this chunk
         django_character = django_chars_by_id.get(existing_char.id)
         if django_character:
             CharacterDBService.upsert_chunk_profile(django_character, book, chunk_number, merged_profile)
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         
         # Update Pydantic object in list
         char_index = pydantic_profiles_list.index(existing_char)
@@ -309,22 +273,14 @@ class ProfileProcessor:
         model_name_raw: str,
         book: Book,
         pydantic_profiles_list: List[Character],
-<<<<<<< HEAD
-        matched_key: str
-=======
         matched_key: str,
         chunk_number: int
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     ) -> None:
         """Create a new character with the profile data."""
         logger.info(f"Creating new character: {model_name_raw}")
         
         merged_profile = Profile(
             name=safe_str(model_name_raw),
-<<<<<<< HEAD
-            age=safe_str(new_profile_data.age),
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             role=safe_str(new_profile_data.role),
             events=safe_list(new_profile_data.events),
             relations=safe_list(new_profile_data.relations),
@@ -333,38 +289,22 @@ class ProfileProcessor:
             personality=safe_list(new_profile_data.personality),
         )
         
-<<<<<<< HEAD
-        # Create Django character
-        django_character = CharacterDBService.create_character(book, merged_profile)
-        
-        # Create Pydantic character and add to list
-        pydantic_character = Character(id=str(django_character.character_id), profile=merged_profile)
-=======
         # Create Django character with initial chunk profile
         django_character = CharacterDBService.create_character_with_initial_chunk_profile(book, chunk_number, merged_profile)
         
         # Create Pydantic character and add to list
         pydantic_character = Character(id=str(django_character.id), profile=merged_profile)
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         pydantic_profiles_list.append(pydantic_character)
         
         # Cache embedding for future similarity matching
         profile_text = EmbeddingService.profile_to_text(merged_profile)
         embedding = EmbeddingService.get_embedding(profile_text)
-<<<<<<< HEAD
-        self.embedding_cache.set_embedding(matched_key, str(django_character.character_id), embedding)
-=======
         self.embedding_cache.set_embedding(matched_key, str(django_character.id), embedding)
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     
     def _merge_profiles(self, existing_profile: Profile, new_profile_data: Any, model_name_raw: str) -> Profile:
         """Merge existing profile with new profile data."""
         return Profile(
             name=safe_str(existing_profile.name),
-<<<<<<< HEAD
-            age=safe_str(new_profile_data.age or existing_profile.age),
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             role=safe_str(new_profile_data.role or existing_profile.role),
             events=merge_list(existing_profile.events, new_profile_data.events),
             relations=merge_relations(existing_profile.relations, new_profile_data.relations),
@@ -380,8 +320,4 @@ class ProfileProcessor:
                 existing_profile.personality,
                 new_profile_data.personality
             ),
-<<<<<<< HEAD
         )
-=======
-        )
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96

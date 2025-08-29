@@ -153,8 +153,6 @@ def validate_profile_data(profile_data: Any) -> bool:
             return False
     
     return True
-<<<<<<< HEAD
-=======
 
 
 def get_summarizer_and_first_name_querier_context(state):
@@ -175,4 +173,3 @@ def get_summarizer_and_first_name_querier_context(state):
         context = f"{previous_chunk_context}\n\n{current_chunk}"
 
     return context
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96

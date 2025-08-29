@@ -10,13 +10,6 @@ class Profile(BaseModel):
     
     name: str = Field(description="اسم الشخصية كما هو مذكور في البروفايل المعطى؛ لا يتم تغييره")
 
-<<<<<<< HEAD
-    age: Optional[str] = Field(
-        default=None,
-        description="العمر التقديري أو الوصف الدال عليه إذا تغير أو أضيف، اتركه None إذا لم يرد جديد"
-    )
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     role: Optional[str] = Field(
         default=None,
         description="الدور الجديد فقط إذا تغير. استخدم أداة character_role_classifier للتحقق من التغيير قبل الدمج"

@@ -45,11 +45,7 @@ class DatabaseSeeder:
         # Character names and data for Arabic context
         self.character_templates = [
             {
-<<<<<<< HEAD
-                "name": "أحمد", "age": "35", "role": "البطل",
-=======
                 "name": "أحمد", "role": "البطل",
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 "physical_characteristics": ["طويل القامة", "أسمر البشرة", "عيون بنية"],
                 "personality": "طيب القلب، شجاع، مساعد للآخرين",
                 "events": ["خرج إلى الحديقة", "ساعد جاره المريض", "وجد كنزاً مدفوناً"],
@@ -57,11 +53,7 @@ class DatabaseSeeder:
                 "aliases": ["أبو محمد", "الرجل الطيب"]
             },
             {
-<<<<<<< HEAD
-                "name": "فاطمة", "age": "30", "role": "الزوجة",
-=======
                 "name": "فاطمة", "role": "الزوجة",
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 "physical_characteristics": ["متوسطة الطول", "شعر أسود", "عيون خضراء"],
                 "personality": "حنونة، ذكية، مهتمة بالأطفال",
                 "events": ["ذهبت إلى السوق", "التقت بمريم", "اشترت هدية لابنتها"],
@@ -69,11 +61,7 @@ class DatabaseSeeder:
                 "aliases": ["أم سارة", "الأم الحنونة"]
             },
             {
-<<<<<<< HEAD
-                "name": "علي", "age": "22", "role": "الطالب",
-=======
                 "name": "علي", "role": "الطالب",
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 "physical_characteristics": ["نحيف", "طويل", "يرتدي نظارات"],
                 "personality": "مجتهد، طموح، محب للأدب",
                 "events": ["يدرس في الجامعة", "يكتب القصص", "يحلم بأن يصبح كاتباً"],
@@ -81,11 +69,7 @@ class DatabaseSeeder:
                 "aliases": ["الطالب المجتهد", "الكاتب الشاب"]
             },
             {
-<<<<<<< HEAD
-                "name": "مريم", "age": "28", "role": "الصديقة",
-=======
                 "name": "مريم", "role": "الصديقة",
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 "physical_characteristics": ["قصيرة القامة", "شعر بني", "ابتسامة جميلة"],
                 "personality": "مرحة، نشيطة، محبة للتسوق",
                 "events": ["التقت بفاطمة", "نصحتها بشراء كتاب", "ذهبت معها إلى المكتبة"],
@@ -93,11 +77,7 @@ class DatabaseSeeder:
                 "aliases": ["المرأة المرحة", "الصديقة الوفية"]
             },
             {
-<<<<<<< HEAD
-                "name": "خديجة", "age": "40", "role": "الطبيبة",
-=======
                 "name": "خديجة", "role": "الطبيبة",
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 "physical_characteristics": ["أنيقة المظهر", "شعر قصير", "عيون ذكية"],
                 "personality": "حكيمة، طيبة، مخلصة في عملها",
                 "events": ["تعالج المرضى", "تساعد الفقراء", "تعمل في العيادة"],
@@ -184,10 +164,6 @@ class DatabaseSeeder:
                 template = random.choice(self.character_templates)
                 profile = {
                     "name": template["name"] + (f" {i+1}" if i > 0 else ""),
-<<<<<<< HEAD
-                    "age": str(random.randint(20, 60)),
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                     "role": template["role"],
                     "personality": template["personality"],
                 }

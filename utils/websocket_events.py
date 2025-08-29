@@ -3,11 +3,6 @@ Standardized WebSocket event structure for progress notifications.
 """
 
 import uuid
-<<<<<<< HEAD
-from datetime import datetime
-from typing import Dict, Any, Optional, Literal
-from django.utils import timezone
-=======
 from typing import Dict, Any, Optional, Literal, TYPE_CHECKING
 from django.utils import timezone
 from asgiref.sync import async_to_sync
@@ -21,7 +16,6 @@ if TYPE_CHECKING:
 
 # Set up logger
 logger = logging.getLogger(__name__)
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 
 # Event types
 EventType = Literal[
@@ -30,11 +24,8 @@ EventType = Literal[
     "preprocessing_complete",
     "chunk_ready",
     "analysis_complete",
-<<<<<<< HEAD
-=======
     "workflow_paused",
     "workflow_resumes",
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     "unexpected_error"
 ]
 
@@ -80,8 +71,6 @@ class WebSocketEvent:
             "timestamp": self.timestamp,
             "data": self.data
         }
-<<<<<<< HEAD
-=======
     
     def send_to_user(self, user_id: str, job_id: str):
         """Send this event to a specific user via WebSocket."""
@@ -123,7 +112,6 @@ class WebSocketEvent:
                 logger.error(f"Standardized progress callback error: {str(e)}")
         
         return progress_callback
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 
 
 # Event factory functions
@@ -239,8 +227,6 @@ def create_unexpected_error_event(
             "user_action": "يرجى المحاولة مرة أخرى أو التواصل مع الدعم"
         }
     )
-<<<<<<< HEAD
-=======
 
 
 def create_workflow_paused_event(
@@ -313,4 +299,3 @@ def progress_callback(job_id: str, event: WebSocketEvent):
         logger.error(f"progress callback error: {str(e)}")
 
 
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96

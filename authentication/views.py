@@ -33,14 +33,6 @@ class RegisterView(APIView, ResponseMixin):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         
-<<<<<<< HEAD
-        # Queue welcome email
-        welcome_task = send_welcome_email.delay(
-            user_id=str(user.id),
-            user_email=user.email,
-            user_name=user.name
-        )
-=======
         # Queue welcome email (do not fail registration if queueing fails)
         try:
             welcome_task = send_welcome_email.delay(
@@ -50,7 +42,6 @@ class RegisterView(APIView, ResponseMixin):
             )
         except Exception as e:
             logging.getLogger(__name__).warning(f"Failed to enqueue welcome email: {e}")
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         
         return self.success_response(
             message_en="User registered successfully",

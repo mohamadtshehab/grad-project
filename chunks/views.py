@@ -34,11 +34,7 @@ class ChunkViewSet(viewsets.ReadOnlyModelViewSet, ResponseMixin):
             # Ensure user owns the book
             book = get_object_or_404(
                 Book, 
-<<<<<<< HEAD
-                book_id=book_id, 
-=======
                 id=book_id, 
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                 # CORRECTED: Use the model field name 'user', not 'user_id'
                 user=self.request.user
             )
@@ -209,10 +205,6 @@ def chunk_characters(request, chunk_id: str):
                 'chunk_id': str(chunk.pk),
                 'book_id': str(chunk.book.pk),
                 'characters': serializer.data,
-<<<<<<< HEAD
-                'count': mentions.count(),
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             }
         )
     except Http404:
@@ -232,11 +224,6 @@ def chunk_characters(request, chunk_id: str):
 @permission_classes([IsAuthenticated])
 def chunk_relationships(request, chunk_id: str):
     """
-<<<<<<< HEAD
-    Get all relationships for characters mentioned in a single chunk.
-    
-    Returns a list of relationships between characters that appear in the specified chunk.
-=======
     Get relationships for characters mentioned in a single chunk.
     
     Query parameters:
@@ -244,7 +231,6 @@ def chunk_relationships(request, chunk_id: str):
     
     Returns a list of relationships between characters that appear in the specified chunk.
     If character_id is provided, only relationships involving that character are returned.
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     """
     try:
         # Validate chunk_id format
@@ -264,8 +250,6 @@ def chunk_relationships(request, chunk_id: str):
             book__user=request.user
         )
         
-<<<<<<< HEAD
-=======
         # Check for character_id filter
         character_id_param = request.query_params.get('character_id')
         filter_character = None
@@ -293,7 +277,6 @@ def chunk_relationships(request, chunk_id: str):
                     status_code=status.HTTP_400_BAD_REQUEST
                 )
         
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         # Get all characters mentioned in this chunk
         chunk_characters = ChunkCharacter.objects.filter(chunk=chunk).values_list('character_id', flat=True)
         
@@ -306,19 +289,6 @@ def chunk_relationships(request, chunk_id: str):
                     'book_id': str(chunk.book.pk),
                     'relationships': [],
                     'total_relationships': 0,
-<<<<<<< HEAD
-                }
-            )
-        
-        # Get all relationships between characters in this chunk
-        relationships = CharacterRelationship.objects.filter(
-            book=chunk.book
-        ).filter(
-            # Both characters must be in the chunk
-            Q(from_character_id__in=chunk_characters) & 
-            Q(to_character_id__in=chunk_characters)
-        ).select_related(
-=======
                     'filtered_character': str(filter_character.id) if filter_character else None
                 }
             )
@@ -340,7 +310,6 @@ def chunk_relationships(request, chunk_id: str):
             )
         
         relationships = relationships_query.select_related(
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             'from_character', 
             'to_character'
         ).order_by('created_at')
@@ -349,18 +318,9 @@ def chunk_relationships(request, chunk_id: str):
         simplified_relationships = []
         for relationship in relationships:
             simplified_relationships.append({
-<<<<<<< HEAD
-                'from_character_name': relationship.from_character.name,
-                'from_character_id': str(relationship.from_character.character_id),
-                'to_character_name': relationship.to_character.name,
-                'to_character_id': str(relationship.to_character.character_id),
-                'relationship_type': relationship.relationship_type,
-                'description': relationship.description
-=======
                 'from_character_id': str(relationship.from_character.id),
                 'to_character_id': str(relationship.to_character.id),
                 'relationship_type': relationship.relationship_type,
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             })
         
         return StandardResponse.success(
@@ -369,17 +329,11 @@ def chunk_relationships(request, chunk_id: str):
             data={
                 'chunk_id': str(chunk.pk),
                 'book_id': str(chunk.book.pk),
-<<<<<<< HEAD
-                'relationships': simplified_relationships,
-                'total_relationships': len(simplified_relationships),
-                'characters_in_chunk': list(chunk_characters)
-=======
                 'chunk_number': chunk.chunk_number,
                 'relationships': simplified_relationships,
                 'total_relationships': len(simplified_relationships),
                 'characters_in_chunk': list(chunk_characters),
                 'filtered_character': str(filter_character.id) if filter_character else None
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
             }
         )
         

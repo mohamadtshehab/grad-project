@@ -39,10 +39,5 @@ ai_workflow/resources/texts/*
 !ai_workflow/resources/texts/01- رواية أرض الإله - احمد مراد_djvu.epub
 !ai_workflow/resources/texts/اللص والكلاب.epub
 !ai_workflow/resources/texts/test_set/
-<<<<<<< HEAD
-=======
-
-
 checkpoints.sqlite
 dump.rdb
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96

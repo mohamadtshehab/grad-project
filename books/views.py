@@ -75,10 +75,7 @@ class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
                     job = Job.objects.create(
                         user=request.user,
                         job_type="book_workflow_process",
-<<<<<<< HEAD
-=======
                         book=book,
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                         status=Job.Status.PENDING,
                         progress=0,
                     )
@@ -87,11 +84,6 @@ class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
                     try:
                         process_book_workflow.delay(
                             job_id=str(job.id),
-<<<<<<< HEAD
-                            user_id=str(request.user.id),
-                            book_id=str(book.book_id),
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                         )
                     except Exception as e:
                         job.status = Job.Status.FAILED
@@ -110,11 +102,7 @@ class BookViewSet(viewsets.ModelViewSet, ResponseMixin):
                 return self.accepted_response(
                     message_en="Book upload accepted; processing started",
                     message_ar="تم قبول رفع الكتاب؛ بدأت المعالجة",
-<<<<<<< HEAD
-                    data={"book_id": str(book.book_id),
-=======
                     data={"book_id": str(book.id),
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
                           "job_id": str(job.id)},
                 )
             

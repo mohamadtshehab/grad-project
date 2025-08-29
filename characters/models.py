@@ -4,10 +4,7 @@ import uuid
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Q, F
-<<<<<<< HEAD
-=======
 from django.forms import CharField
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 from books.models import Book
 from chunks.models import Chunk
 import json
@@ -23,38 +20,20 @@ class Character(models.Model):
     Model for storing character profiles extracted by an AI workflow. 
     Each character is unique to a specific book.
     """
-<<<<<<< HEAD
-    character_id = models.UUIDField(
-=======
     id = models.UUIDField(
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         primary_key=True, 
         default=uuid.uuid4, 
         editable=False,
         help_text="Unique identifier for each character."
     )
-<<<<<<< HEAD
-    
-    # The custom encoder is removed as Django's JSONField handles Unicode well.
-    profile = models.JSONField(
-        help_text="Flexible JSON data for the character's profile (e.g., name, age, personality).",
-        encoder=UnicodeJSONEncoder
-    )
-    
-=======
         
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     book = models.ForeignKey(
         Book,
         on_delete=models.CASCADE,
         related_name='characters',
         help_text="The book this character belongs to."
     )
-<<<<<<< HEAD
-    
-=======
         
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -66,19 +45,6 @@ class Character(models.Model):
             models.Index(fields=['created_at']),
         ]
     
-<<<<<<< HEAD
-    def __str__(self):
-        """Returns a human-readable representation of the character."""
-        name = self.profile.get('name', 'Unknown Character')
-        return f"{name} in '{self.book.title}'"
-    
-    @property
-    def name(self):
-        """A convenient property to access the character's name from the JSON data."""
-        return self.profile.get('name', '') if self.profile else ''
-
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 
 class ChunkCharacter(models.Model):
     """
@@ -88,33 +54,17 @@ class ChunkCharacter(models.Model):
     chunk = models.ForeignKey(
         Chunk,
         on_delete=models.CASCADE,
-<<<<<<< HEAD
-        related_name='character_mentions'
-    )
-=======
     )
     
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     character = models.ForeignKey(
         Character,
         on_delete=models.CASCADE,
         related_name='chunk_mentions'
     )
     
-<<<<<<< HEAD
-    mention_count = models.PositiveIntegerField(
-        default=1,
-        help_text="Number of times the character is mentioned in this chunk."
-    )
-    position_info = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="JSON data on the positions of mentions within the chunk."
-=======
     character_profile = models.JSONField(
         help_text="Flexible JSON data for the character's profile (e.g., name, personality).",
         encoder=UnicodeJSONEncoder
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     )
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -132,11 +82,6 @@ class ChunkCharacter(models.Model):
             models.Index(fields=['character']),
         ]
     
-<<<<<<< HEAD
-    def __str__(self):
-        return f"Mention of {self.character.name} in {self.chunk}"
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 
 
 class CharacterRelationship(models.Model):
@@ -145,14 +90,11 @@ class CharacterRelationship(models.Model):
     """
 
     # Using more descriptive field names like 'from_character' and 'to_character'
-<<<<<<< HEAD
-=======
     chunk = models.ForeignKey(
         Chunk,
         on_delete=models.CASCADE,
     )
     
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     from_character = models.ForeignKey(
         Character,
         on_delete=models.CASCADE,
@@ -170,33 +112,14 @@ class CharacterRelationship(models.Model):
         max_length=50,
         help_text="The nature of the relationship."
     )
-<<<<<<< HEAD
-    description = models.TextField(
-        blank=True,
-        help_text="A detailed description of the relationship."
-    )
-    
-    book = models.ForeignKey(
-        Book,
-        on_delete=models.CASCADE,
-        related_name='character_relationships',
-        help_text="The book in which this relationship exists."
-    )
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'character_relationship'
-<<<<<<< HEAD
-        unique_together = ['from_character', 'to_character', 'book']
-        ordering = ['book', 'from_character', 'to_character']
-=======
         unique_together = ['from_character', 'to_character', 'chunk']
         ordering = ['chunk', 'from_character', 'to_character']
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         constraints = [
             # Ensures a character cannot be related to themselves.
             models.CheckConstraint(
@@ -211,12 +134,6 @@ class CharacterRelationship(models.Model):
             )
         ]
 
-<<<<<<< HEAD
-    def __str__(self):
-        return f"{self.from_character.name} -> {self.get_relationship_type_display()} -> {self.to_character.name}"
-
-=======
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
     def clean(self):
         """
         Custom validation to enforce canonical order before saving.
@@ -227,18 +144,8 @@ class CharacterRelationship(models.Model):
             if self.from_character.book != self.to_character.book:
                 raise ValidationError("Both characters must belong to the same book.")
             
-<<<<<<< HEAD
-            # Auto-assign the relationship's book from the characters
-            self.book = self.from_character.book
-
-            # Automatically swap characters to maintain canonical order (from.id < to.id)
-            # We use the string representation of UUIDs for comparison
-            if str(self.from_character.pk) > str(self.to_character.pk):
-                self.from_character, self.to_character = self.to_character, self.from_character
-=======
             # Automatically swap characters to maintain canonical order (from.id < to.id)
             # We use the string representation of UUIDs for comparison
             if str(self.from_character.pk) > str(self.to_character.pk):
                 self.from_character, self.to_character = self.to_character, self.from_character
                 
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96

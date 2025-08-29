@@ -6,17 +6,6 @@ from .models import Book
 class BookAdmin(admin.ModelAdmin):
     """Admin configuration for Book model"""
     
-<<<<<<< HEAD
-    list_display = ['title', 'author', 'user', 'created_at', 'is_deleted']
-    list_filter = ['is_deleted', 'created_at', 'author']
-    search_fields = ['title', 'author', 'description']
-    ordering = ['-created_at']
-    readonly_fields = ['book_id', 'created_at', 'updated_at', 'file_size', 'file_extension']
-    
-    fieldsets = (
-        (None, {
-            'fields': ('book_id', 'title', 'author', 'description', 'user')
-=======
     list_display = ['title', 'user', 'created_at', 'is_deleted']
     list_filter = ['is_deleted', 'created_at']
     search_fields = ['title']
@@ -26,7 +15,6 @@ class BookAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': ('id', 'title', 'user')
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
         }),
         ('File Information', {
             'fields': ('file', 'file_size', 'file_extension')

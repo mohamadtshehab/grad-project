@@ -5,10 +5,7 @@ from django.shortcuts import get_object_or_404
 from .models import Job
 from .serializers import JobSerializer
 from .response_utils import ResponseMixin
-<<<<<<< HEAD
-=======
 from books.tasks import process_book_workflow
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
 
 
 class JobDetailView(APIView, ResponseMixin):
@@ -23,11 +20,7 @@ class JobDetailView(APIView, ResponseMixin):
 		)
 
 
-<<<<<<< HEAD
-=======
 class PauseJobView(APIView, ResponseMixin):
-	permission_classes = [permissions.IsAuthenticated]
-
 	def post(self, request, job_id: str):
 		"""
 		Pause a job by changing its status to PAUSED.
@@ -122,4 +115,3 @@ class ResumeJobView(APIView, ResponseMixin):
  
 
 
->>>>>>> cdbf19e699fca259958993c6df6f4865ecc42e96
