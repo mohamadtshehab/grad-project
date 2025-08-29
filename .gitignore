@@ -41,3 +41,5 @@ ai_workflow/resources/texts/*
 !ai_workflow/resources/texts/test_set/
 checkpoints.sqlite
 dump.rdb
+checkpoints.sqlite-wal
+checkpoints.sqlite-shm
