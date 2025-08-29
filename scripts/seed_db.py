@@ -131,8 +131,6 @@ class DatabaseSeeder:
             
             book = Book.objects.create(
                 title=title,
-                author=random.choice(authors),
-                description=fake.text(max_nb_chars=200),
                 user=random.choice(self.users)
             )
             book.file.save(filename, file_content, save=True)
@@ -150,7 +148,6 @@ class DatabaseSeeder:
                     chunk_text=chunk_text,
                     chunk_number=i + 1,
                     book=book,
-                    word_count=len(chunk_text.split())
                 )
                 self.chunks.append(chunk)
         print(f"✅ Created {len(self.chunks)} chunks!")
@@ -162,20 +159,15 @@ class DatabaseSeeder:
             character_count = random.randint(3, 5)
             for i in range(character_count):
                 template = random.choice(self.character_templates)
-                profile = {
-                    "name": template["name"] + (f" {i+1}" if i > 0 else ""),
-                    "role": template["role"],
-                    "personality": template["personality"],
-                }
+                # Create character without profile (profiles are now chunk-based)
                 character = Character.objects.create(
-                    book=book,
-                    profile=profile
+                    book=book
                 )
                 self.characters.append(character)
         print(f"✅ Created {len(self.characters)} characters!")
 
     def create_chunk_characters(self):
-        """Create chunk-character relationships"""
+        """Create chunk-character relationships with character profiles"""
         print("🔗 Creating chunk-character relationships...")
         relationships_count = 0
         for book in self.books:
@@ -187,13 +179,24 @@ class DatabaseSeeder:
                 num_mentions = random.randint(1, min(3, len(book_characters)))
                 mentioned_characters = random.sample(book_characters, k=num_mentions)
                 for character in mentioned_characters:
+                    # Create character profile for this chunk
+                    template = random.choice(self.character_templates)
+                    profile = {
+                        "name": template["name"] + (f" {str(character.id)[:8]}" if character.id else ""),
+                        "role": template["role"],
+                        "personality": template["personality"],
+                        "events": template["events"],
+                        "relations": template["relationships"],
+                        "aliases": template["aliases"],
+                        "physical_characteristics": template["physical_characteristics"]
+                    }
                     ChunkCharacter.objects.create(
                         chunk=chunk,
                         character=character,
-                        mention_count=random.randint(1, 5)
+                        character_profile=profile
                     )
                     relationships_count += 1
-        print(f"✅ Created {relationships_count} chunk-character relationships!")
+        print(f"✅ Created {len(self.characters)} chunk-character relationships!")
 
     def create_character_relationships(self):
         """Create character relationships"""
@@ -203,7 +206,8 @@ class DatabaseSeeder:
         
         for book in self.books:
             book_characters = list(book.characters.all())
-            if len(book_characters) < 2:
+            book_chunks = list(book.chunks.all())
+            if len(book_characters) < 2 or not book_chunks:
                 continue
             
             for i, char1 in enumerate(book_characters):
@@ -221,12 +225,14 @@ class DatabaseSeeder:
 
                         relationship_type = random.choice(relationship_types)
                         
+                        # Create relationship in a random chunk of the book
+                        chunk = random.choice(book_chunks)
+                        
                         CharacterRelationship.objects.create(
-                            from_character=from_char, # Use the sorted variable
-                            to_character=to_char,   # Use the sorted variable
+                            from_character=from_char,
+                            to_character=to_char,
                             relationship_type=relationship_type,
-                            description=f"{from_char.name} و {to_char.name} لديهما علاقة {relationship_type}",
-                            book=book
+                            chunk=chunk
                         )
                         relationships_count += 1
         print(f"✅ Created {relationships_count} character relationships!")
@@ -246,11 +252,18 @@ class DatabaseSeeder:
         
         sample_book = Book.objects.first()
         if sample_book:
-            print(f"\n📋 Sample Book: {sample_book.title} by {sample_book.author}")
+            print(f"\n📋 Sample Book: {sample_book.title}")
         
         sample_character = Character.objects.first()
         if sample_character:
-            print(f"📋 Sample Character: {sample_character.name} - {sample_character.profile.get('role', 'Unknown')}")
+            # Get character name from latest chunk profile
+            chunk_char = ChunkCharacter.objects.filter(character=sample_character).first()
+            if chunk_char and chunk_char.character_profile:
+                char_name = chunk_char.character_profile.get('name', 'Unknown')
+                char_role = chunk_char.character_profile.get('role', 'Unknown')
+                print(f"📋 Sample Character: {char_name} - {char_role}")
+            else:
+                print(f"📋 Sample Character: {sample_character.id} - No profile yet")
         
         print("\n🎉 Database seeding completed successfully!")
 
