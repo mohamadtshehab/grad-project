@@ -42,3 +42,4 @@ ai_workflow/resources/texts/*
 
 
 checkpoints.sqlite
+dump.rdb
