@@ -10,7 +10,6 @@ setup_django()
 
 # Import after Django setup
 from ai_workflow.src.schemas.states import State
-from ai_workflow.src.schemas.contexts import Context
 from ai_workflow.src.schemas.output_structures import EmptyProfileValidation, Character
 from ai_workflow.src.services.db_services import (
     CharacterDBService, ChunkCharacterService, CharacterRelationshipService, ChunkDBService,
@@ -24,7 +23,7 @@ from utils.websocket_events import create_chunk_ready_event, create_workflow_pau
 from books.models import Book
 from utils.models import Job
 from langgraph.types import interrupt
-# Configure logging
+from ai_workflow.src.services.utils import get_summarizer_and_first_name_querier_context
 logging.basicConfig(level=getattr(logging, LOG_LEVEL), format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
@@ -63,27 +62,29 @@ def first_name_querier(state: State):
     """
     logger.info("Extracting character names from the current chunk.")
     
-    chunk_num = state['chunk_num']
-    all_chunks = state['clean_chunks']
-    current_chunk = all_chunks[chunk_num]
-    
-    # Initialize context with the current chunk. This also handles the first chunk (index 0).
-    context = str(current_chunk)
-
-    # If it's not the first chunk, prepend context from the previous chunk.
-    if chunk_num > 0:
-        previous_chunk = all_chunks[chunk_num - 1]
-        third_of_length = len(previous_chunk) // 3
-        previous_chunk_context = str(previous_chunk[2 * third_of_length:])
-        
-        # Combine the context from the previous chunk with the current chunk.
-        context = f"{previous_chunk_context}\n\n{current_chunk}"
-
+    context = get_summarizer_and_first_name_querier_context(state)
     # Use the combined context to extract character names.
     characters = AIChainService.extract_character_names(context)
     
     logger.info(f"Found {len(characters)} character names.")
     return {'last_appearing_names': characters}
+
+def summarizer(state: State) -> Dict[str, Any]:
+    """
+    Node that generates text summaries using AI service.
+    """
+    
+    context = get_summarizer_and_first_name_querier_context(state)
+    character_names = state.get('last_appearing_names') or []
+    summary = AIChainService.generate_summary(context, character_names)
+    
+    if summary is None:
+        logger.warning("Summary generation blocked for prohibited content")
+        return {'prohibited_content': True}
+    
+    logger.info("Summary generated successfully")
+    return {'last_summary': summary}
+
 
 def second_name_querier(state: State) -> Dict[str, List[str]]:
     """
@@ -110,7 +111,7 @@ def profile_retriever_creator(state: State) -> Dict[str, Dict[str, List[Characte
     logger.info(f"Retrieving profiles for {len(last_appearing_names)} characters")
     
     # Get the book instance
-    book = Book.objects.get(book_id=book_id)
+    book = Book.objects.get(id=book_id)
     
     # Use optimized bulk query service
     characters_by_name_django = CharacterDBService.get_characters_by_names_and_book(
@@ -148,13 +149,13 @@ def profile_refresher(state: State) -> Dict[str, Dict[str, List[Character]]]:
     # Use the new ProfileProcessor service
     processor = ProfileProcessor(similarity_threshold=SIMILARITY_THRESHOLD)
     updated_profiles = processor.process_profile_updates(
-        last_profiles_by_name, last_summary, book_id, list_of_character_name
+        last_profiles_by_name, last_summary, book_id, list_of_character_name, state['chunk_num']
     )
     
-    # Store character relationships
-    book = Book.objects.get(book_id=book_id)
+    # Store character relationships for this chunk
+    book = Book.objects.get(id=book_id)
     all_profiles = [char.profile for profiles in updated_profiles.values() for char in profiles]
-    CharacterRelationshipService.store_character_relationships(book, all_profiles)
+    CharacterRelationshipService.store_character_relationships(book, state['chunk_num'], all_profiles)
     
     logger.info("Profile refresh completed")
     return {"last_profiles_by_name": updated_profiles}
@@ -197,30 +198,6 @@ def chunk_updater(state: State) -> Dict[str, Any]:
         }
 
 
-def summarizer(state: State) -> Dict[str, Any]:
-    """
-    Node that generates text summaries using AI service.
-    """
-    
-    last_summary = state['last_summary']
-    third_of_length = len(last_summary) // 3
-    current_chunk = state['clean_chunks'][state['chunk_num']]
-    
-    # Prepare context
-    context = str(last_summary[2 * third_of_length:]) + " " + str(current_chunk)
-    character_names = state['last_appearing_names']
-    
-    # Generate summary using AI service
-    summary = AIChainService.generate_summary(context, character_names)
-    
-    if summary is None:
-        logger.warning("Summary generation blocked for prohibited content")
-        return {'prohibited_content': True}
-    
-    logger.info("Summary generated successfully")
-    return {'last_summary': summary}
-
-
 def empty_profile_validator(state: State) -> Dict[str, Any]:
     """
     Node that validates empty profiles and suggests improvements.
@@ -229,7 +206,9 @@ def empty_profile_validator(state: State) -> Dict[str, Any]:
     logger.info("Validating empty profiles")
     
     # Prepare validation input
-    profiles_text = [char.profile for char in state['last_profiles']]
+    last_profiles_list = state.get('last_profiles') or []
+    from ai_workflow.src.services.ai_services import EmbeddingService
+    profiles_text = [EmbeddingService.profile_to_text(char.profile) for char in last_profiles_list]
     
     # Use AI service for validation
     response = AIChainService.validate_empty_profiles(
@@ -251,14 +230,14 @@ def empty_profile_validator(state: State) -> Dict[str, Any]:
     
     # Bulk update characters
     book_id = state.get('book_id')
-    book = Book.objects.get(book_id=book_id)
+    book = Book.objects.get(id=book_id)
     
     # Prepare bulk updates
     characters_and_profiles = []
     updated_characters = []
     
     for i, profile in enumerate(response.profiles):
-        existing_character = state['last_profiles'][i]
+        existing_character = last_profiles_list[i]
         
         # Get Django character
         django_chars = CharacterDBService.get_characters_by_ids([existing_character.id])
@@ -273,11 +252,12 @@ def empty_profile_validator(state: State) -> Dict[str, Any]:
     
     # Perform bulk update
     if characters_and_profiles:
-        CharacterDBService.bulk_update_characters(characters_and_profiles)
-        logger.info(f"Updated {len(characters_and_profiles)} character profiles")
+        # Use chunk-based bulk upsert for this validator context
+        CharacterDBService.bulk_upsert_chunk_profiles(book, state['chunk_num'], characters_and_profiles)
+        logger.info(f"Updated {len(characters_and_profiles)} character chunk profiles")
     
     # Store relationships
-    CharacterRelationshipService.store_character_relationships(book, response.profiles)
+    CharacterRelationshipService.store_character_relationships(book, state['chunk_num'], response.profiles)
     
     logger.info("Profile validation completed")
     return {

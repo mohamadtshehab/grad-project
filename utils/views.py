@@ -28,7 +28,7 @@ class PauseJobView(APIView, ResponseMixin):
 		Pause a job by changing its status to PAUSED.
 		Only the job owner can pause their own jobs.
 		"""
-		job = get_object_or_404(Job, id=job_id, user=request.user)
+		job = get_object_or_404(Job, id=job_id)
 		
 		# Check if the job can be paused
 		if job.status == Job.Status.PAUSED:

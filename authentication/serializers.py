@@ -21,11 +21,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop('password_confirm')  # Remove confirmation field
-        user = User.objects.create_user(
+        user = User(
             email=validated_data["email"],
             name=validated_data["name"],
-            password=validated_data["password"],
         )
+        user.set_password(validated_data["password"])
+        user.save()
         return user
 
 

@@ -13,11 +13,11 @@ class CharacterAdmin(admin.ModelAdmin):
     list_filter = ['book', 'created_at']
     search_fields = ['profile__name', 'profile__role']
     ordering = ['book', 'profile__name']
-    readonly_fields = ['character_id', 'created_at', 'updated_at']
+    readonly_fields = ['id', 'created_at', 'updated_at']
 
     fieldsets = (
         (None, {
-            'fields': ('character_id', 'book', 'profile')
+            'fields': ('id', 'book', 'profile')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -43,15 +43,15 @@ class ChunkCharacterAdmin(admin.ModelAdmin):
     """Admin configuration for ChunkCharacter model"""
 
     # Use custom methods to display data from related models
-    list_display = ['get_character_name', 'get_chunk_number', 'mention_count', 'created_at']
-    list_filter = ['chunk__book', 'mention_count', 'created_at'] # Use 'chunk__' not 'chunk_id__'
+    list_display = ['get_character_name', 'get_chunk_number', 'created_at']
+    list_filter = ['chunk__book', 'created_at']
     search_fields = ['character__profile__name', 'chunk__chunk_number'] # Corrected field names
     ordering = ['chunk', 'character'] # Use actual field names
     readonly_fields = ['created_at', 'updated_at']
 
     fieldsets = (
         (None, {
-            'fields': ('chunk', 'character', 'mention_count', 'position_info') # Corrected field names
+            'fields': ('chunk', 'character') # Corrected field names
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -76,20 +76,19 @@ class ChunkCharacterAdmin(admin.ModelAdmin):
 class CharacterRelationshipAdmin(admin.ModelAdmin):
     """Admin configuration for CharacterRelationship model"""
 
-    list_display = ['get_character_1_name', 'relationship_type', 'get_character_2_name', 'book', 'created_at']
-    list_filter = ['relationship_type', 'book', 'created_at']
+    list_display = ['get_character_1_name', 'relationship_type', 'get_character_2_name', 'chunk', 'created_at']
+    list_filter = ['relationship_type', 'chunk', 'created_at']
     # Corrected search_fields to use the proper model field names
     search_fields = [
         'from_character__profile__name',
         'to_character__profile__name',
-        'description'
     ]
-    ordering = ['book', 'from_character', 'to_character']
+    ordering = ['chunk', 'from_character', 'to_character']
     readonly_fields = ['created_at', 'updated_at']
 
     fieldsets = (
         (None, {
-            'fields': ('from_character', 'to_character', 'relationship_type', 'description', 'book')
+            'fields': ('from_character', 'to_character', 'relationship_type', 'desciption', 'chunk')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
