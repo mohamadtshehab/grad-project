@@ -1,7 +1,8 @@
 from langgraph.graph import StateGraph, START, END
 from ai_workflow.src.schemas.states import State
-from ai_workflow.src.graphs.subgraphs.preprocessor.nodes.regular_nodes import *
-from ai_workflow.src.graphs.subgraphs.preprocessor.nodes.router_nodes import *
+from ai_workflow.src.graphs.preprocessor.regular_nodes import *
+from ai_workflow.src.graphs.preprocessor.router_nodes import *
+from ai_workflow.src.schemas.contexts import Context
 
 graph = StateGraph(State)
 graph.add_node('cleaner', cleaner)

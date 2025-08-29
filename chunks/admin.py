@@ -6,25 +6,22 @@ from .models import Chunk
 class ChunkAdmin(admin.ModelAdmin):
     """Admin configuration for Chunk model"""
 
-    list_display = ['chunk_number', 'book_title', 'word_count', 'created_at']
+    list_display = ['chunk_number', 'book_title', 'created_at']
     # Use the model field 'book', not the db column 'book_id'
     list_filter = ['book', 'created_at']
     # Use 'book__title' to traverse the relationship
     search_fields = ['chunk_text', 'book__title']
     # Use the model field 'book' for ordering
     ordering = ['book', 'chunk_number']
-    readonly_fields = ['chunk_id', 'created_at', 'updated_at', 'word_count']
+    readonly_fields = ['id', 'created_at', 'updated_at']
 
     fieldsets = (
         (None, {
             # Use the model field 'book'
-            'fields': ('chunk_id', 'book', 'chunk_number')
+            'fields': ('id', 'book', 'chunk_number')
         }),
         ('Content', {
             'fields': ('chunk_text',)
-        }),
-        ('Metadata', {
-            'fields': ('start_position', 'end_position', 'word_count')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),

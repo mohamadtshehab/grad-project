@@ -3,9 +3,19 @@ Standardized WebSocket event structure for progress notifications.
 """
 
 import uuid
-from datetime import datetime
-from typing import Dict, Any, Optional, Literal
+from typing import Dict, Any, Optional, Literal, TYPE_CHECKING
 from django.utils import timezone
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
+import logging
+from utils.models import Job
+
+# Type checking imports
+if TYPE_CHECKING:
+    from channels.layers import BaseChannelLayer
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 # Event types
 EventType = Literal[
@@ -14,6 +24,8 @@ EventType = Literal[
     "preprocessing_complete",
     "chunk_ready",
     "analysis_complete",
+    "workflow_paused",
+    "workflow_resumes",
     "unexpected_error"
 ]
 
@@ -59,6 +71,47 @@ class WebSocketEvent:
             "timestamp": self.timestamp,
             "data": self.data
         }
+    
+    def send_to_user(self, user_id: str, job_id: str):
+        """Send this event to a specific user via WebSocket."""
+        try:
+            channel_layer: Optional['BaseChannelLayer'] = get_channel_layer()
+            if channel_layer:
+                group_name = f"user_{user_id}"
+                
+                # Send to user-specific group
+                async_to_sync(channel_layer.group_send)(
+                    group_name,
+                    {"type": "job_update", "job_id": job_id, **self.to_dict()}
+                )
+                
+                # Send to test group for development
+                async_to_sync(channel_layer.group_send)(
+                    "test_group",
+                    {"type": "job_update", "job_id": job_id, **self.to_dict()}
+                )
+            else:
+                logger.error("Channel layer not available")
+                
+        except Exception as e:
+            logger.error(f"Failed to send event to user {user_id}: {str(e)}")
+    
+    @staticmethod
+    def create_progress_callback(user_id: str, job_id: str):
+        """Create a standardized progress callback function for the AI workflow graph."""
+        def progress_callback(event: 'WebSocketEvent'):
+            """
+            Standardized callback function to send progress updates via WebSocket.
+            
+            Args:
+                event: WebSocketEvent object with standardized structure
+            """
+            try:
+                event.send_to_user(user_id, job_id)
+            except Exception as e:
+                logger.error(f"Standardized progress callback error: {str(e)}")
+        
+        return progress_callback
 
 
 # Event factory functions
@@ -174,3 +227,75 @@ def create_unexpected_error_event(
             "user_action": "يرجى المحاولة مرة أخرى أو التواصل مع الدعم"
         }
     )
+
+
+def create_workflow_paused_event(
+    reason: str = 'Paused by user'
+) -> WebSocketEvent:
+    """Create a workflow paused event."""
+        
+    return WebSocketEvent(
+        event_type="workflow_paused",
+        status="progress",
+        data={'reason': reason}
+    )
+
+
+def create_workflow_resumes_event(
+    resumed_at: Optional[str] = None
+) -> WebSocketEvent:
+    """Create a workflow resumes event."""
+    data = {
+        "resumed_at": resumed_at or timezone.now().isoformat()
+    }
+        
+    return WebSocketEvent(
+        event_type="workflow_resumes",
+        status="progress",
+        data=data
+    )
+
+
+def _send_event(job_id: str, event: WebSocketEvent):
+    """Send standardized WebSocket event to user."""
+    try:
+        job = Job.objects.get(id=job_id)
+        user_id = job.user.id  # type: ignore
+        if not user_id:
+            logger.error(f"User not found for job {job_id}")
+            return
+        channel_layer: Optional['BaseChannelLayer'] = get_channel_layer()
+        if channel_layer:
+            group_name = f"user_{user_id}"
+            
+            # Send to user-specific group
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {"type": "job_update", "job_id": job_id, **event.to_dict()}
+            )
+            
+            # Send to test group for development
+            async_to_sync(channel_layer.group_send)(
+                "test_group",
+                {"type": "job_update", "job_id": job_id, **event.to_dict()}
+            )
+        else:
+            logger.error("Channel layer not available")
+            
+    except Exception as e:
+        logger.error(f"Failed to send standardized event to user {user_id}: {str(e)}")
+
+
+def progress_callback(job_id: str, event: WebSocketEvent):
+    """
+    Standardized callback function to send progress updates via WebSocket.
+    
+    Args:
+        event: WebSocketEvent object with standardized structure
+    """
+    try:
+        _send_event(job_id, event)
+    except Exception as e:
+        logger.error(f"progress callback error: {str(e)}")
+
+

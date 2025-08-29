@@ -2,9 +2,9 @@ from ai_workflow.src.preprocessors.text_checkers import ArabicLanguageDetector
 from ai_workflow.src.schemas.states import State
 from ai_workflow.src.schemas.output_structures import *
 from ai_workflow.src.preprocessors.text_splitters import get_validation_chunks
-from ai_workflow.src.language_models.chains import text_quality_assessment_chain, text_classification_chain, empty_profile_validation_chain
+from ai_workflow.src.language_models.chains import text_quality_assessment_chain, text_classification_chain
 from books.models import Book
-from utils.websocket_events import create_validation_error_event, create_validation_success_event, create_unexpected_error_event
+from utils.websocket_events import create_validation_error_event, create_validation_success_event, progress_callback
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ def language_checker(state : State):
     Supports both EPUB and plain text files.
     """
 
-    book = Book.objects.get(book_id=state['book_id'])
+    book = Book.objects.get(id=state['book_id'])
     file_path = book.txt_file.path
     detector = ArabicLanguageDetector()
     result = detector.check_text(file_path)
@@ -24,7 +24,7 @@ def language_checker(state : State):
     book.save()
     
     # Send validation result via standardized event
-    if 'progress_callback' in state:
+    if state['from_http']:
         if result != "ar":
             error_event = create_validation_error_event(
                 validation_stage="language_check",
@@ -33,10 +33,10 @@ def language_checker(state : State):
                 details="يدعم النظام حاليًا الكتب باللغة العربية فقط",
                 user_action="يرجى رفع كتاب باللغة العربية"
             )
-            state['progress_callback'](error_event)
+            progress_callback(job_id=state['job_id'], event=error_event) #type: ignore
             return
     
-    return
+    return {}
 
     
 
@@ -44,7 +44,7 @@ def text_quality_assessor(state):
     """
     Node that assesses the quality of Arabic text using Gemini AI.
     """
-    book = Book.objects.get(book_id=state['book_id'])
+    book = Book.objects.get(id=state['book_id'])
     file_path = book.txt_file.path
 
     formatted_chunks = get_validation_chunks(file_path,  chunk_size=30, num_chunks_to_select=5)
@@ -66,7 +66,7 @@ def text_quality_assessor(state):
     book.save()
     
     # Send validation result via standardized event
-    if 'progress_callback' in state:
+    if state['from_http']:
         if assessment["quality_score"] < 0.5:
             # Send validation error event
             error_event = create_validation_error_event(
@@ -76,7 +76,7 @@ def text_quality_assessor(state):
                 details=f"درجة الجودة: {assessment['quality_score']:.2f}. الحد الأدنى المطلوب: 0.5",
                 user_action="يرجى رفع كتاب بجودة نص أفضل"
             )
-            state['progress_callback'](error_event)
+            progress_callback(job_id=state['job_id'], event=error_event) #type: ignore
             return
         
     return
@@ -86,7 +86,7 @@ def text_classifier(state: State):
     """
     Node that classifies the input text as literary or non-literary using Gemini AI.
     """
-    book = Book.objects.get(book_id=state['book_id'])
+    book = Book.objects.get(id=state['book_id'])
     file_path = book.txt_file.path
     formatted_chunks = get_validation_chunks(file_path, chunk_size=30, num_chunks_to_select=5)
     
@@ -108,7 +108,7 @@ def text_classifier(state: State):
     book.save()
     
     # Send validation result via standardized event
-    if 'progress_callback' in state:
+    if state['from_http']:
         if not classification["is_literary"]:
             # Send validation error event
             error_event = create_validation_error_event(
@@ -118,13 +118,12 @@ def text_classifier(state: State):
                 details="يدعم النظام حاليًا الكتب الأدبية فقط (روايات، قصص، إلخ)",
                 user_action="يرجى رفع كتاب أدبي (رواية أو مجموعة قصصية)"
             )
-            state['progress_callback'](error_event)
-            return
+            progress_callback(job_id=state['job_id'], event=error_event) #type: ignore
+            return  
     
-    # If all validations passed, send success event
-    if 'progress_callback' in state and classification["is_literary"]:
+    if state['from_http']:
         success_event = create_validation_success_event()
-        state['progress_callback'](success_event)
+        progress_callback(job_id=state['job_id'], event=success_event) #type: ignore
     
     return
 

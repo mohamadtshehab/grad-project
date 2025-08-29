@@ -13,13 +13,12 @@ class CharacterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Character
         fields = [
-            'character_id',
+            'id',
             'name',
-            'profile',
             'created_at',
             'updated_at',
         ]
-        read_only_fields = ['character_id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 
@@ -27,7 +26,7 @@ class CharacterForMentionSerializer(serializers.ModelSerializer):
     """A simplified Character serializer for nesting."""
     class Meta:
         model = Character
-        fields = ['character_id', 'profile']
+        fields = ['id']
 
 class ChunkCharacterSerializer(serializers.ModelSerializer):
     """Serializer for a character mention within a chunk."""
@@ -36,7 +35,7 @@ class ChunkCharacterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChunkCharacter
-        fields = ['character', 'mention_count', 'position_info']
+        fields = ['character']
 
 
 class CharacterRelationshipSerializer(serializers.ModelSerializer):
@@ -50,7 +49,6 @@ class CharacterRelationshipSerializer(serializers.ModelSerializer):
             'from_character',
             'to_character',
             'relationship_type',
-            'description',
             'created_at',
             'updated_at'
         ]

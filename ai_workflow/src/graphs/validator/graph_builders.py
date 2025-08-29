@@ -1,8 +1,7 @@
 from langgraph.graph import StateGraph, START, END
 from ai_workflow.src.schemas.states import State
-from ai_workflow.src.graphs.subgraphs.validator.nodes.regular_nodes import *
-from ai_workflow.src.graphs.subgraphs.validator.nodes.router_nodes import *
-
+from ai_workflow.src.graphs.validator.regular_nodes import *
+from ai_workflow.src.graphs.validator.router_nodes import *
 graph = StateGraph(State)
 
 graph.add_node("language_checker",language_checker)

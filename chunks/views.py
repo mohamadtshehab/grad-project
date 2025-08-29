@@ -34,7 +34,7 @@ class ChunkViewSet(viewsets.ReadOnlyModelViewSet, ResponseMixin):
             # Ensure user owns the book
             book = get_object_or_404(
                 Book, 
-                book_id=book_id, 
+                id=book_id, 
                 # CORRECTED: Use the model field name 'user', not 'user_id'
                 user=self.request.user
             )
@@ -205,7 +205,6 @@ def chunk_characters(request, chunk_id: str):
                 'chunk_id': str(chunk.pk),
                 'book_id': str(chunk.book.pk),
                 'characters': serializer.data,
-                'count': mentions.count(),
             }
         )
     except Http404:
@@ -225,9 +224,13 @@ def chunk_characters(request, chunk_id: str):
 @permission_classes([IsAuthenticated])
 def chunk_relationships(request, chunk_id: str):
     """
-    Get all relationships for characters mentioned in a single chunk.
+    Get relationships for characters mentioned in a single chunk.
+    
+    Query parameters:
+    - character_id (optional): Filter relationships to only include the specified character
     
     Returns a list of relationships between characters that appear in the specified chunk.
+    If character_id is provided, only relationships involving that character are returned.
     """
     try:
         # Validate chunk_id format
@@ -247,6 +250,33 @@ def chunk_relationships(request, chunk_id: str):
             book__user=request.user
         )
         
+        # Check for character_id filter
+        character_id_param = request.query_params.get('character_id')
+        filter_character = None
+        
+        if character_id_param:
+            try:
+                character_uuid = uuid.UUID(character_id_param)
+                # Verify the character exists and user has access
+                filter_character = get_object_or_404(
+                    Character.objects.select_related('book'),
+                    id=character_uuid,
+                    book__user=request.user
+                )
+                # Verify the character belongs to the same book as the chunk
+                if filter_character.book != chunk.book:
+                    return StandardResponse.error(
+                        message_en="Character does not belong to the same book as the chunk",
+                        message_ar="الشخصية لا تنتمي لنفس الكتاب الذي ينتمي إليه الجزء",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+            except ValueError:
+                return StandardResponse.error(
+                    message_en="Invalid character ID format",
+                    message_ar="تنسيق معرف الشخصية غير صحيح",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+        
         # Get all characters mentioned in this chunk
         chunk_characters = ChunkCharacter.objects.filter(chunk=chunk).values_list('character_id', flat=True)
         
@@ -259,17 +289,27 @@ def chunk_relationships(request, chunk_id: str):
                     'book_id': str(chunk.book.pk),
                     'relationships': [],
                     'total_relationships': 0,
+                    'filtered_character': str(filter_character.id) if filter_character else None
                 }
             )
         
-        # Get all relationships between characters in this chunk
-        relationships = CharacterRelationship.objects.filter(
-            book=chunk.book
-        ).filter(
-            # Both characters must be in the chunk
-            Q(from_character_id__in=chunk_characters) & 
-            Q(to_character_id__in=chunk_characters)
-        ).select_related(
+        # Build relationship query
+        relationships_query = CharacterRelationship.objects.filter(chunk=chunk)
+        
+        if filter_character:
+            # Filter to relationships involving the specific character
+            relationships_query = relationships_query.filter(
+                Q(from_character=filter_character) | Q(to_character=filter_character)
+            )
+        else:
+            # Get all relationships between characters in this chunk
+            relationships_query = relationships_query.filter(
+                # Both characters must be in the chunk
+                Q(from_character_id__in=chunk_characters) & 
+                Q(to_character_id__in=chunk_characters)
+            )
+        
+        relationships = relationships_query.select_related(
             'from_character', 
             'to_character'
         ).order_by('created_at')
@@ -278,12 +318,9 @@ def chunk_relationships(request, chunk_id: str):
         simplified_relationships = []
         for relationship in relationships:
             simplified_relationships.append({
-                'from_character_name': relationship.from_character.name,
-                'from_character_id': str(relationship.from_character.character_id),
-                'to_character_name': relationship.to_character.name,
-                'to_character_id': str(relationship.to_character.character_id),
+                'from_character_id': str(relationship.from_character.id),
+                'to_character_id': str(relationship.to_character.id),
                 'relationship_type': relationship.relationship_type,
-                'description': relationship.description
             })
         
         return StandardResponse.success(
@@ -292,9 +329,11 @@ def chunk_relationships(request, chunk_id: str):
             data={
                 'chunk_id': str(chunk.pk),
                 'book_id': str(chunk.book.pk),
+                'chunk_number': chunk.chunk_number,
                 'relationships': simplified_relationships,
                 'total_relationships': len(simplified_relationships),
-                'characters_in_chunk': list(chunk_characters)
+                'characters_in_chunk': list(chunk_characters),
+                'filtered_character': str(filter_character.id) if filter_character else None
             }
         )
         
