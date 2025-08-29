@@ -19,7 +19,7 @@ from ai_workflow.src.services.ai_services import AIChainService
 from ai_workflow.src.services.profile_processor import ProfileProcessor
 from ai_workflow.src.services.utils import SIMILARITY_THRESHOLD
 from ai_workflow.src.configs import LOG_FORMAT, LOG_LEVEL
-from utils.websocket_events import create_chunk_ready_event, create_workflow_paused_event
+from utils.websocket_events import create_chunk_ready_event, progress_callback
 from books.models import Book
 from utils.models import Job
 from langgraph.types import interrupt
@@ -42,13 +42,6 @@ def pauser(state: State) -> Dict[str, Any]:
     try:
         job = Job.objects.get(id=job_id)
         if job.status == Job.Status.PAUSED:
-            
-            event = create_workflow_paused_event(
-                reason = "Stopped by user"
-            )
-            if state['from_http']:
-                progress_callback(job_id, event) #type: ignore
-                
             return {"pause_signal": interrupt("Stopped by user")}
     except Job.DoesNotExist:
         print(f"Warning: Job {job_id} not found during pause check.")

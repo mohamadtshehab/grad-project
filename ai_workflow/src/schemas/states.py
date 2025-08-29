@@ -24,7 +24,7 @@ def create_initial_state(book_id: str, job_id: str, from_http: bool):
     
     Args:
         book_id: book ID for character context
-        progress_callback: callback function for progress updates
+        
     """
 
     state = {

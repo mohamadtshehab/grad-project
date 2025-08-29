@@ -7,10 +7,12 @@ from django.utils import timezone
 from utils.models import Job
 from books.models import Book
 from utils.websocket_events import (
+    create_workflow_paused_event,
     create_workflow_resumes_event,
     create_analysis_complete_event, 
     create_processing_error_event,
-    progress_callback
+    progress_callback,
+    create_processing_started_event
 )
 import logging
 from ai_workflow.src.graphs.orhcestrator.graph_builders import orchestrator_graph
@@ -47,8 +49,11 @@ def _configure_graph_execution(
         initial_state = create_initial_state(
             book_id=str(job.book.id),
             job_id=str(job.id),
-            from_http=False
+            from_http=True
         )
+        started_event = create_processing_started_event()
+        progress_callback(job_id=str(job.id), event=started_event)
+        logger.info(f"Job {job.id} started.")
     else:  # This is a resumed run
         logger.info(f"Configuring resumed AI workflow for job {job.id} with thread_id {thread_id}")
         resume_event = create_workflow_resumes_event()
@@ -68,7 +73,7 @@ def _configure_graph_execution(
 def _handle_successful_completion(job: Job):
     """Handles the final steps after a graph completes successfully."""
     
-    book = Book.objects.get(id=job.book)
+    book = Book.objects.get(id=job.book.id)
     book.processing_status = 'completed'
     book.save()
     
@@ -101,6 +106,20 @@ def _handle_workflow_failure(exc: Exception, job: Job):
     except Exception as cleanup_exc:
         logger.error(f"Failed to cleanup after error for job {job.id}: {str(cleanup_exc)}")
 
+def _handle_paused_status(job: Job, final_snapshot: Any):
+    """Handles the paused status."""
+    book = Book.objects.get(id=job.book.id)
+    book.processing_status = 'pending'
+    book.save()
+    
+    job.status = Job.Status.PAUSED
+    job.result = {"status": "paused"}  # type: ignore
+    job.save(update_fields=["status", "result", "updated_at"])
+    
+    completion_event = create_workflow_paused_event()
+    progress_callback(job_id=str(job.id), event=completion_event)
+    logger.info(f"Job {job.id} paused successfully.")
+    
 
 @shared_task(bind=True, max_retries=1, default_retry_delay=60)
 def process_book_workflow(self, job_id: str):
@@ -126,7 +145,7 @@ def process_book_workflow(self, job_id: str):
             return {"status": "success", "job_id": job_id}
         else:
             # Handle paused state
-            logger.info(f"Job {job_id} paused. Next step would be: {final_snapshot.next}")
+            _handle_paused_status(job, final_snapshot)
             return {"status": "paused", "job_id": job_id}
             
     except Exception as exc:

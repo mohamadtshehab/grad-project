@@ -21,6 +21,8 @@ class JobDetailView(APIView, ResponseMixin):
 
 
 class PauseJobView(APIView, ResponseMixin):
+	permission_classes = [permissions.IsAuthenticated]
+	
 	def post(self, request, job_id: str):
 		"""
 		Pause a job by changing its status to PAUSED.
@@ -71,7 +73,7 @@ class ResumeJobView(APIView, ResponseMixin):
 		Resume a paused job by calling the process_book_workflow task.
 		Only the job owner can resume their own jobs.
 		"""
-		job = get_object_or_404(Job, id=job_id, user=request.user)
+		job = get_object_or_404(Job, id=job_id)
 		
 		# Check if the job can be resumed
 		if job.status != Job.Status.PAUSED:
@@ -113,5 +115,41 @@ class ResumeJobView(APIView, ResponseMixin):
 			)
 	
  
+
+
+class UserJobsListView(APIView, ResponseMixin):
+	permission_classes = [permissions.IsAuthenticated]
+
+	def get(self, request):
+		"""
+		Get all jobs for the authenticated user.
+		Returns jobs ordered by creation date (newest first).
+		"""
+		jobs = Job.objects.filter(user=request.user).order_by('-created_at')
+		
+		# Apply optional filters if provided
+		status_filter = request.query_params.get('status')
+		if status_filter:
+			jobs = jobs.filter(status=status_filter)
+		
+		job_type_filter = request.query_params.get('job_type')
+		if job_type_filter:
+			jobs = jobs.filter(job_type=job_type_filter)
+		
+		serializer = JobSerializer(jobs, many=True)
+		
+		return self.success_response(
+			message_en="User jobs retrieved successfully",
+			message_ar="تم استرجاع مهام المستخدم بنجاح",
+			data={
+				'jobs': serializer.data,
+				'count': jobs.count(),
+				'filters_applied': {
+					'status': status_filter,
+					'job_type': job_type_filter
+				}
+			}
+		)
+
 
 

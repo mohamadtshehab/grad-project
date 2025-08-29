@@ -398,3 +398,80 @@ def chunk_relationships(request, chunk_id: str):
             message_ar="فشل في استرجاع علاقات الجزء",
             error_detail=str(e)
         )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def accumulated_characters(request, chunk_id: str):
+    """
+    Aggregate the latest known profile for each character from chunk 1 up to K,
+    where K is the chunk number of the provided chunk_id.
+
+    URL: /api/chunks/<chunk_id>/accumulated-characters
+    """
+    try:
+        chunk_uuid = uuid.UUID(chunk_id)
+    except ValueError:
+        return StandardResponse.error(
+            message_en="Invalid chunk ID format",
+            message_ar="تنسيق معرف الجزء غير صحيح",
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # Verify user access and resolve chunk & book
+        chunk = get_object_or_404(
+            Chunk.objects.select_related('book'),
+            pk=chunk_uuid,
+            book__user=request.user
+        )
+
+        # Consider all chunk mentions up to and including this chunk number for same book
+        mentions_qs = (
+            ChunkCharacter.objects
+            .filter(character__book=chunk.book, chunk__chunk_number__lte=chunk.chunk_number)
+            .select_related('character', 'chunk')
+            .order_by('character_id', '-chunk__chunk_number')
+        )
+
+        # Pick latest per character (since ordered by character then descending chunk_number)
+        latest_per_character = {}
+        for cc in mentions_qs:
+            cid = str(cc.character.id)
+            if cid in latest_per_character:
+                continue
+            latest_per_character[cid] = cc
+
+        results = []
+        for cid, cc in latest_per_character.items():
+            profile = cc.character_profile or {}
+            results.append({
+                'character_id': cid,
+                'character_name': profile.get('name', cid),
+                'latest_profile_upto_K': profile,
+                'source_chunk_number': cc.chunk.chunk_number,
+                'source_chunk_id': str(cc.chunk.id)
+            })
+
+        return StandardResponse.success(
+            message_en="Accumulated characters retrieved successfully",
+            message_ar="تم استرجاع الشخصيات المتراكمة بنجاح",
+            data={
+                'book_id': str(chunk.book.id),
+                'up_to_chunk_number': chunk.chunk_number,
+                'chunk_id': str(chunk.id),
+                'total_characters': len(results),
+                'characters': results
+            }
+        )
+    except Http404:
+        return StandardResponse.not_found(
+            message_en="Chunk not found or access denied",
+            message_ar="الجزء غير موجود أو الوصول مرفوض"
+        )
+    except Exception as e:
+        return StandardResponse.server_error(
+            message_en="Failed to retrieve accumulated characters",
+            message_ar="فشل في استرجاع الشخصيات المتراكمة",
+            error_detail=str(e)
+        )

@@ -26,6 +26,7 @@ EventType = Literal[
     "analysis_complete",
     "workflow_paused",
     "workflow_resumes",
+    "processing_started",
     "unexpected_error"
 ]
 
@@ -95,23 +96,6 @@ class WebSocketEvent:
                 
         except Exception as e:
             logger.error(f"Failed to send event to user {user_id}: {str(e)}")
-    
-    @staticmethod
-    def create_progress_callback(user_id: str, job_id: str):
-        """Create a standardized progress callback function for the AI workflow graph."""
-        def progress_callback(event: 'WebSocketEvent'):
-            """
-            Standardized callback function to send progress updates via WebSocket.
-            
-            Args:
-                event: WebSocketEvent object with standardized structure
-            """
-            try:
-                event.send_to_user(user_id, job_id)
-            except Exception as e:
-                logger.error(f"Standardized progress callback error: {str(e)}")
-        
-        return progress_callback
 
 
 # Event factory functions
@@ -251,6 +235,20 @@ def create_workflow_resumes_event(
         
     return WebSocketEvent(
         event_type="workflow_resumes",
+        status="progress",
+        data=data
+    )
+
+
+def create_processing_started_event(
+) -> WebSocketEvent:
+    """Create a processing started event."""
+    data = {
+        "status": "processing_started"
+    }
+        
+    return WebSocketEvent(
+        event_type="processing_started",
         status="progress",
         data=data
     )

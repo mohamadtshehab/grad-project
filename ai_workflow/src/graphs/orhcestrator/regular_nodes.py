@@ -1,5 +1,4 @@
 from ai_workflow.src.schemas.states import State
-from ai_workflow.src.schemas.contexts import Context
 from books.models import Book
 from ai_workflow.src.extractors.book_name_extractor import extract_book_name_from_file
 from utils.websocket_events import create_book_extracted_event, progress_callback

@@ -77,3 +77,5 @@ METADATA_REMOVAL_CONFIG = {
     ],
     'start_keywords':['فصل', 'أول', 'جزء']
 }
+
+QUALITY_SCORE_THRESHOLD = 0.6

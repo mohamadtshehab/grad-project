@@ -6,7 +6,7 @@ from ai_workflow.src.language_models.chains import text_quality_assessment_chain
 from books.models import Book
 from utils.websocket_events import create_validation_error_event, create_validation_success_event, progress_callback
 import logging
-
+from ai_workflow.src.configs import QUALITY_SCORE_THRESHOLD
 logger = logging.getLogger(__name__)
         
 def language_checker(state : State):
@@ -24,8 +24,8 @@ def language_checker(state : State):
     book.save()
     
     # Send validation result via standardized event
-    if state['from_http']:
-        if result != "ar":
+    if result != "ar":
+        if state['from_http']:
             error_event = create_validation_error_event(
                 validation_stage="language_check",
                 error_code="LANGUAGE_NOT_SUPPORTED",
@@ -34,9 +34,9 @@ def language_checker(state : State):
                 user_action="يرجى رفع كتاب باللغة العربية"
             )
             progress_callback(job_id=state['job_id'], event=error_event) #type: ignore
-            return
+        return {'validation_passed': False}
     
-    return {}
+    return
 
     
 
@@ -66,19 +66,18 @@ def text_quality_assessor(state):
     book.save()
     
     # Send validation result via standardized event
-    if state['from_http']:
-        if assessment["quality_score"] < 0.5:
+    if assessment["quality_score"] < QUALITY_SCORE_THRESHOLD:
+        if state['from_http']:
             # Send validation error event
             error_event = create_validation_error_event(
                 validation_stage="text_quality",
                 error_code="POOR_TEXT_QUALITY",
                 message="جودة النص منخفضة",
-                details=f"درجة الجودة: {assessment['quality_score']:.2f}. الحد الأدنى المطلوب: 0.5",
+                details=f"درجة الجودة: {assessment['quality_score']:.2f}. الحد الأدنى المطلوب: {QUALITY_SCORE_THRESHOLD}",
                 user_action="يرجى رفع كتاب بجودة نص أفضل"
             )
             progress_callback(job_id=state['job_id'], event=error_event) #type: ignore
-            return
-        
+        return {'validation_passed': False}
     return
 
 
@@ -108,9 +107,8 @@ def text_classifier(state: State):
     book.save()
     
     # Send validation result via standardized event
-    if state['from_http']:
-        if not classification["is_literary"]:
-            # Send validation error event
+    if not classification["is_literary"]:
+        if state['from_http']:
             error_event = create_validation_error_event(
                 validation_stage="book_classification",
                 error_code="INVALID_GENRE",
@@ -119,7 +117,7 @@ def text_classifier(state: State):
                 user_action="يرجى رفع كتاب أدبي (رواية أو مجموعة قصصية)"
             )
             progress_callback(job_id=state['job_id'], event=error_event) #type: ignore
-            return  
+        return {'validation_passed': False}            
     
     if state['from_http']:
         success_event = create_validation_success_event()

@@ -1,6 +1,6 @@
 from ai_workflow.src.schemas.states import State
 from books.models import Book
-
+from ai_workflow.src.configs import QUALITY_SCORE_THRESHOLD
 
 def router_from_language_checker_to_text_quality_assessor_or_end(state : State):
     """
@@ -19,7 +19,7 @@ def router_from_text_quality_assessor_to_text_classifier_or_end(state: State):
     Node that routes to the text classifier or end based on the response from the text quality assessor.
     """
     book = Book.objects.get(id=state['book_id'])
-    if book.quality_score >= 0.6:
+    if float(book.quality_score) >= QUALITY_SCORE_THRESHOLD:
         return 'text_classifier'
     else:
         state['validation_passed'] = False

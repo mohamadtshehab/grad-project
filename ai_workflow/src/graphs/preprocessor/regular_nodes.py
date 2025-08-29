@@ -6,7 +6,6 @@ from ai_workflow.src.configs import CHUNKING_CONFIG, METADATA_REMOVAL_CONFIG
 from books.models import Book
 from chunks.models import Chunk
 from utils.websocket_events import create_preprocessing_complete_event, progress_callback
-from ai_workflow.src.schemas.contexts import Context
 
 def chunker(state: State):
     """

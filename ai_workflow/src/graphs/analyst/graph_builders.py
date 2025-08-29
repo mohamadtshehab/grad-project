@@ -2,7 +2,6 @@ from langgraph.graph import StateGraph, START, END
 from ai_workflow.src.schemas.states import State
 from ai_workflow.src.graphs.analyst.regular_nodes import *
 from ai_workflow.src.graphs.analyst.router_nodes import *
-from ai_workflow.src.schemas.contexts import Context
 
 graph = StateGraph(State)
 graph.add_node('first_name_querier', first_name_querier)
