@@ -21,8 +21,6 @@ class JobDetailView(APIView, ResponseMixin):
 
 
 class PauseJobView(APIView, ResponseMixin):
-	permission_classes = [permissions.IsAuthenticated]
-
 	def post(self, request, job_id: str):
 		"""
 		Pause a job by changing its status to PAUSED.

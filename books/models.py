@@ -97,9 +97,6 @@ class Book(models.Model):
         Returns:
             The full file path to the original EPUB file
             
-        Raises:
-            Book.DoesNotExist: If book not found
-            ValueError: If book has no file
         """
         try:
             book = cls.objects.get(id=id)
