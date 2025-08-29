@@ -10,7 +10,7 @@ def name_extractor(state: State):
     Node that extracts the book name from the file content using LLM.
     Uses the same logic as the existing extract_book_name_from_file function.
     """
-    book = Book.objects.get(book_id=state['book_id'])
+    book = Book.objects.get(id=state['book_id'])
     response = extract_book_name_from_file(book.txt_file.path)
     book.title = response.book_name # type: ignore
     book.save()
